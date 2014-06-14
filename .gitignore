@@ -1,0 +1,12 @@
+*.xml
+*.pyc
+*.sqlite
+!languages.sqlite
+lib/python2.7
+*.swp
+log*
+TODO
+srsly_google
+*journal
+managedb.py
+*.rb
