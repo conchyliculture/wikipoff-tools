@@ -69,6 +69,7 @@ class SaveFRTemplates:
         self.fr_saveJaponaisTemplatesRE=re.compile(r'{{japonais\|([^\|]+)\|([^}]+)}}', re.IGNORECASE)
         self.fr_saveSimpleSieclesTempaltesRE=re.compile(ur'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
         self.fr_saveSieclesTempaltesRE=re.compile(ur'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
+        self.fr_saveNapoleonTemplatesRE=re.compile(ur'{{(Napoléon I)er}}', re.IGNORECASE)
 
         self.aRE=re.compile(r'<math>')
         self.bRE=re.compile(r'</math>')
@@ -88,6 +89,8 @@ class SaveFRTemplates:
         text=self.fr_saveQuiQuoiTemplates(text)
         text=self.fr_saveCodeTemplates(text)
         text=self.fr_saveCitationTemplate(text)
+        text=self.fr_saveNapoleonTemplates(text)
+        text=self.fr_saveDateShortTemplates(text)
 #        text=self.fr_savePasspromotionnelTemplates(text)
 #        text=self.fr_savePassIneditTemplates(text)
 #        text=self.fr_savePasClairTemplates(text)
@@ -96,6 +99,8 @@ class SaveFRTemplates:
 #        text=self.fr_savestyleTemplates(text)
         return text
 
+    def fr_saveNapoleonTemplates(self,text):
+        return self.fr_saveNapoleonTemplatesRE.sub(r'Napoléon I<sup>er</sup>',text)
     def fr_saveDouteuxTemplates(self,text):
         return self.fr_saveDouteuxTemplatesRE.sub(r'\1<sup>[douteux]</sup>',text)
     def fr_savePasspromotionnelTemplates(self,text):
@@ -344,7 +349,7 @@ class WikiFRTests(unittest.TestCase):
         tests=[
             ["{{1er janvier}}","1<sup>er</sup> janvier"],
             [u"{{1er février}}",u"1<sup>er</sup> février"],
-            ["{{1er mars}}","1<sup>er</sup> mars"],
+            [u"Le {{1er mars}}, le débarquement, prévu ",u"Le 1<sup>er</sup> mars, le débarquement, prévu "],
             ["{{1er avril}}","1<sup>er</sup> avril"],
             ["{{1er mai}}","1<sup>er</sup> mai"],
             ["{{1er juin}}","1<sup>er</sup> juin"],
