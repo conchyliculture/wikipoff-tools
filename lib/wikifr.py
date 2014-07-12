@@ -25,7 +25,6 @@ import sys
 import locale
 import unittest
 import traceback
-locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
 
 def is_allowed_title(title):
     if title in [u"Modèle",u"Catégorie",u"Portail",u"Fichier",u"Wikipédia",u"Projet",u"Référence",u"MediaWiki",u"Aide",u"Module"]:
@@ -73,8 +72,15 @@ class SaveFRTemplates:
 
         self.aRE=re.compile(r'<math>')
         self.bRE=re.compile(r'</math>')
+	self.locale_set=False
 
     def save(self,t):
+	if self.locale_set==False:
+		print "pute"
+		locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
+		self.locale_set = True
+	else:
+		print "non pute"
         text=t
         text=self.fr_saveTemperatureTemplates(text)
         text=self.fr_saveFormatnumTemplates(text)
