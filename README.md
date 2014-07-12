@@ -5,6 +5,7 @@ This set of tools are required to build [Wikipedia](https://www.wikipedia.org/) 
 
 ## Getting Started
 
+0. You need python-dev libs to compile pylzma
 1. `make.sh` and follow instructions
 2. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/
 
