@@ -52,6 +52,9 @@ def unescape(text):
 
     return re.sub("&#?(\w+);", fixup, text)
 
+# Match list stars
+listsRE = re.compile(r'^\*+')
+
 # Match HTML comments
 comment = re.compile(r'<!--.*?-->', re.DOTALL)
 
@@ -292,11 +295,14 @@ def compact(text):
     page = []                   # list of paragraph
     headers = {}                # Headers for unfilled sections
     emptySection = False        # empty sections are discarded
-    inList = False              # whether opened <UL>
+    inList = 0              # whether opened <UL>
 
     for line in text.split('\n'):
 
         if not line:
+            if inList>0:
+                page.append("</ul>"*inList)
+                inList=0
             page.append("<br/><br/>") # for lisibility
             continue
         # Handle section titles
@@ -326,7 +332,13 @@ def compact(text):
         # handle lists
         elif line[0] in '*#:;':
             if wikiglobals.keepSections:
-                page.append("<li>%s</li>" % line[1:])
+                listdepth = len(listsRE.search(line).group())
+                if listdepth > inList:
+                    page.append("<ul>" * (listdepth - inList))
+                elif listdepth < inList:
+                    page.append("</ul>" * (inList - listdepth))
+                inList=listdepth
+                page.append("<li>%s</li>" % line[inList:])
             else:
                 continue
         # Drop residuals of lists
