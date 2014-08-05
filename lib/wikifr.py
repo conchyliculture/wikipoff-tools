@@ -36,6 +36,7 @@ class SaveFRTemplates:
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
         # TODO
+        self.fr_saveHeureTemplatesRE=re.compile(ur'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateTemplatesRE=re.compile(ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateShortTemplatesRE=re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveLangTemplatesRE=re.compile(r'{{(lang(?:ue)?(?:-\w+)?(?:\|[^}\|]+)+)}}', re.IGNORECASE|re.UNICODE)
@@ -82,6 +83,7 @@ class SaveFRTemplates:
 	else:
 		print "non pute"
         text=t
+        text=self.fr_saveHeureTemplates(text)
         text=self.fr_saveTemperatureTemplates(text)
         text=self.fr_saveFormatnumTemplates(text)
         text=self.fr_saveUnitsTemplates(text)
@@ -105,6 +107,21 @@ class SaveFRTemplates:
 #        text=self.fr_savestyleTemplates(text)
         return text
 
+
+    def replheures(self,m):
+        res=""
+        t=m.group(1).split("|")
+        l=len(t)
+# HELLO I LOVE YOU CAN I HAVE SWITCH CASE FFS
+        if l==2:
+            res= "%s h"%t[1]
+        elif l==3:
+            res= "%s h %s"%(t[1],t[2])
+        elif l==4:
+            res= "%s h %s min %s s"%(t[1],t[2],t[3])
+        return res.strip()
+    def fr_saveHeureTemplates(self,text):
+        return re.sub(self.fr_saveHeureTemplatesRE,self.replheures,text)
     def fr_saveNapoleonTemplates(self,text):
         return self.fr_saveNapoleonTemplatesRE.sub(r'Napoléon I<sup>er</sup>',text)
     def fr_saveDouteuxTemplates(self,text):
@@ -455,7 +472,16 @@ class WikiFRTests(unittest.TestCase):
         for t in tests:
             self.assertEqual(self.sfrt.fr_saveJaponaisTemplates(t[0]), t[1])
 
-
+    def testHeures(self):
+        tests=[
+                [u"{{heure|8}}",u"8 h"],
+                [u"{{heure|22}}",u"22 h"],
+                [u"{{heure|1|55}}",u"1 h 55"],
+                [u"{{heure|10|5}}",u"10 h 5"],
+                [u"{{heure|22|55|00}}",u"22 h 55 min 00 s"],
+            ]
+        for t in tests:
+            self.assertEqual(self.sfrt.fr_saveHeureTemplates(t[0]), t[1])
 
 def main():
     unittest.main()
