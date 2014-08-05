@@ -77,11 +77,8 @@ class SaveFRTemplates:
 
     def save(self,t):
 	if self.locale_set==False:
-		print "pute"
 		locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
 		self.locale_set = True
-	else:
-		print "non pute"
         text=t
         text=self.fr_saveHeureTemplates(text)
         text=self.fr_saveTemperatureTemplates(text)
