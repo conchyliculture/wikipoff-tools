@@ -487,5 +487,6 @@ def main():
     unittest.main()
 
 if __name__ == '__main__':
+    locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
     main()
 
