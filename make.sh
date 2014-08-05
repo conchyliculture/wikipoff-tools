@@ -31,7 +31,7 @@ if [ ! -f "$WIKIBZ" ]; then
     wget $WIKIDUMPURL
 fi
 
-if [ ! -d "$LIBDIRR" ]; then
+if [ ! -d "$EGGDIR" ]; then
     mkdir -p "$EGGDIR"
     wget "$PYLZMAURL"
     tar xzf "$PYLZMAARCH"
