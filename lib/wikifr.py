@@ -69,6 +69,7 @@ class SaveFRTemplates:
         self.fr_saveJaponaisTemplatesRE=re.compile(r'{{japonais\|([^\|]+)\|([^}]+)}}', re.IGNORECASE)
         self.fr_saveSimpleSieclesTempaltesRE=re.compile(ur'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
         self.fr_saveSieclesTempaltesRE=re.compile(ur'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
+        self.fr_saveSieclesGTempaltesRE=re.compile(ur'{{(-?sp-?(\|[^|}]+\|er?\|[^|}]+\|[^|}]+\|er?\|?s?))}}', re.IGNORECASE)
         self.fr_saveNapoleonTemplatesRE=re.compile(ur'{{(Napoléon I)er}}', re.IGNORECASE)
 
         self.aRE=re.compile(r'<math>')
@@ -86,6 +87,7 @@ class SaveFRTemplates:
         text=self.fr_saveUnitsTemplates(text)
         text=self.fr_saveWeirdNumbersTemplates(text)
         text=self.fr_saveNumeroTemplate(text)
+        text=self.fr_saveSieclesGTemplates(text)
         text=self.fr_saveSieclesTemplates(text)
         text=self.fr_saveLangTemplates(text)
         text=self.fr_saveCouleursTemplates(text)
@@ -166,6 +168,37 @@ class SaveFRTemplates:
 
     def fr_saveSieclesTemplates(self,text):
         return re.sub(self.fr_saveSieclesTempaltesRE,self.replsiecles,text)
+
+
+    def replgsiecles(self,m):
+        nb=m.group(1)
+        res=""
+        if nb:
+            try:
+                siecle=""
+                avjc=""
+                a,b,c,d,e,f=nb.split("|",5)
+                if a.startswith("-"):
+                    res=" av. J.-C."
+                index=f.find("|")
+                si=u"siècle"
+                if index>0:
+                    f,s=f.split("|")
+                    if s!="":
+                        si=u"siècles"
+
+                return u"%s%s %s %s%s %s%s"%(b,c,d,e,f,si,res)
+            except ValueError as e:
+                # Failing humbly...
+                raise e
+                print "pute"
+                return nb
+        else:
+            nb=m.group(1)
+            return "<a href=\"%s\">%s</a>"%(nb,nb)
+
+    def fr_saveSieclesGTemplates(self,text):
+        return re.sub(self.fr_saveSieclesGTempaltesRE,self.replgsiecles,text)
 
     def fr_saveSimpleSieclesTemplates(self,text):
         return self.fr_saveSimpleSieclesTempaltesRE.sub(ur'\1',text,re.LOCALE)
@@ -407,6 +440,17 @@ class WikiFRTests(unittest.TestCase):
         for t in tests:
             self.assertEqual(self.sfrt.fr_saveSimpleSieclesTemplates(t[0]), t[1])
 
+    def testGSiecles(self):
+        tests=[
+                [u"{{sp|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
+                [u"{{sp-|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
+                [u"{{-sp|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
+                [u"{{-sp-|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
+                [u"au {{sp-|XII|e|et au|XVI|e}}",u"au XIIe et au XVIe siècle"],
+        ]
+        for t in tests:
+            self.assertEqual(self.sfrt.fr_saveSieclesGTemplates(t[0]), t[1])
+
 
 
     def testTemperature(self):
@@ -464,6 +508,7 @@ class WikiFRTests(unittest.TestCase):
         tests=[
                 [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}",u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
                 [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}",u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
+                [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un",u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
             ]
 
         for t in tests:
