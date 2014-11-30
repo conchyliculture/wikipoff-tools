@@ -122,7 +122,7 @@ class SaveFRTemplates:
     def fr_saveHeureTemplates(self,text):
         return re.sub(self.fr_saveHeureTemplatesRE,self.replheures,text)
     def fr_saveNapoleonTemplates(self,text):
-        return self.fr_saveNapoleonTemplatesRE.sub(r'Napoléon I<sup>er</sup>',text)
+        return self.fr_saveNapoleonTemplatesRE.sub(ur'Napoléon I<sup>er</sup>',text)
     def fr_saveDouteuxTemplates(self,text):
         return self.fr_saveDouteuxTemplatesRE.sub(r'\1<sup>[douteux]</sup>',text)
     def fr_savePasspromotionnelTemplates(self,text):
