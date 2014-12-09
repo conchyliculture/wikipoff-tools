@@ -39,7 +39,7 @@ def prepare_env():
     eggdir=os.path.join(os.getcwd(),"lib","python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.egg")
     if not os.path.exists(eggdir):
         os.makedirs(eggdir)
-    if not os.path.exists(os.path.join(eggdir,"/pylzma.so")):
+    if not os.path.exists(os.path.join(eggdir,"pylzma.so")):
         if os.environ.has_key("PYTHONPATH"):
             os.environ['PYTHONPATH']=os.environ['PYTHONPATH']  +":"+os.path.join(eggdir,"..")
         else:
