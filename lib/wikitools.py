@@ -331,16 +331,19 @@ def compact(text):
                 page.append(title)
         # handle lists
         elif line[0] in '*#:;':
-            if wikiglobals.keepSections:
-                listdepth = len(listsRE.search(line).group())
-                if listdepth > inList:
-                    page.append("<ul>" * (listdepth - inList))
-                elif listdepth < inList:
-                    page.append("</ul>" * (inList - listdepth))
-                inList=listdepth
-                page.append("<li>%s</li>" % line[inList:])
-            else:
-                continue
+            try:
+                if wikiglobals.keepSections:
+                    listdepth = len(listsRE.search(line).group())
+                    if listdepth > inList:
+                        page.append("<ul>" * (listdepth - inList))
+                    elif listdepth < inList:
+                        page.append("</ul>" * (inList - listdepth))
+                    inList=listdepth
+                    page.append("<li>%s</li>" % line[inList:])
+                else:
+                    continue
+            except AttributeError:
+                page.append(line)
         # Drop residuals of lists
         elif line[0] in '{|' or line[-1] in '}':
             continue
