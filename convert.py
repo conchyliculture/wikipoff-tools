@@ -64,14 +64,22 @@ def ask_method():
     print("")
     print("Please select where to get Wiki dump from: ")
     print("")
-    print("[1] Provide URL to the dump")
-    print("[2] Provide a path to the dump")
+    print("[1] Provide URL to dump")
+    print("[2] Provide a path to dump")
     print("")
     try: 
         method = int(raw_input('Please select: '))
         return method
     except ValueError:
         return 0
+
+def ask_output(i):
+    default,x,lost = i.rpartition(".xml")
+    default=default+".sqlite"
+    print("")
+    res = raw_input("Please select output sqlite db output name:\n[%s] "%default)
+    return res
+
 
 def download_url():
 
@@ -135,4 +143,6 @@ if not os.path.isfile(dump_file):
     print("Can't find expected %s after decompressing, exiting"%dump_file)
     sys.exit(1)
 
+output_sqlite = ask_output(dump_file)
  
+os.system("python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite))
