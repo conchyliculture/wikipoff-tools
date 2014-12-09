@@ -308,6 +308,10 @@ def main():
 
     inputsize = os.path.getsize(input_file)
 
+    if output_file is None or output_file=="":
+        print "I need a filename for the destination sqlite file"
+        sys.exit(1)
+
     if os.path.isfile(output_file):
         print("%s already exists. Won't overwrite it."%output_file)
         sys.exit(1)
