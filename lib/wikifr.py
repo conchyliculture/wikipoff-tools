@@ -397,7 +397,7 @@ class WikiFRTests(unittest.TestCase):
         ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveLangTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testDateShort(self):
         tests=[
@@ -415,7 +415,7 @@ class WikiFRTests(unittest.TestCase):
             [u"{{1er décembre}}",u"1<sup>er</sup> décembre"],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveDateShortTemplates(t[0]),t[1])
+            self.assertEqual(self.sfrt.save(t[0]),t[1])
 
     def testDate(self):
         tests=[
@@ -429,7 +429,7 @@ class WikiFRTests(unittest.TestCase):
             [u"'''Jean-François Bergier''', né à [[Lausanne]], le {{date de naissance|5|décembre|1931}} et mort le {{date de décès|29|octobre|2009}}&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].",u"'''Jean-François Bergier''', né à [[Lausanne]], le 5 décembre 1931 et mort le 29 octobre 2009&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]]."],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveDateTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testSimpleSiecle(self):
         tests=[
@@ -439,7 +439,7 @@ class WikiFRTests(unittest.TestCase):
                 [u"{{Ier millénaire av. J.-C.}}, {{IIe millénaire av. J.-C.}}, ...",u"Ier millénaire av. J.-C., IIe millénaire av. J.-C., ..."],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveSimpleSieclesTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testGSiecles(self):
         tests=[
@@ -461,7 +461,7 @@ class WikiFRTests(unittest.TestCase):
                 [u"Entre 40 et {{tmp|70|°C}}",u"Entre 40 et 70°C"],
                  ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveTemperatureTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testSiecle(self):
         tests=[
@@ -477,7 +477,7 @@ class WikiFRTests(unittest.TestCase):
 
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveSieclesTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
     def testUnit(self):
         tests=[
                 [u"{{Unité|1234567}}","1 234 567"],
@@ -496,14 +496,14 @@ class WikiFRTests(unittest.TestCase):
                 [u"{{Unité|1,23456|e=9|J|2|K|3|s|-1}}",u"1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>"],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveUnitsTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testFormatNum(self):
         tests=[
                 [u"Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}",u"Elle comporte plus de 1 000 [[espèce]]s dans 90"],
                 ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveFormatnumTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testJaponais(self):
         tests=[
@@ -512,7 +512,7 @@ class WikiFRTests(unittest.TestCase):
             ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveJaponaisTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
     def testHeures(self):
         tests=[
@@ -523,7 +523,7 @@ class WikiFRTests(unittest.TestCase):
                 [u"{{heure|22|55|00}}",u"22 h 55 min 00 s"],
             ]
         for t in tests:
-            self.assertEqual(self.sfrt.fr_saveHeureTemplates(t[0]), t[1])
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
 
 def main():
     unittest.main()
