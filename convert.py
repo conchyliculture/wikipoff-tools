@@ -37,6 +37,7 @@ def download_file(url,dest=None):
 
 def prepare_env():
     eggdir=os.path.join(os.getcwd(),"lib","python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.egg")
+    print eggdir
     if not os.path.exists(eggdir):
         os.makedirs(eggdir)
     if not os.path.exists(os.path.join(eggdir,"pylzma.so")):
@@ -120,16 +121,16 @@ while method == 0:
     else:
         method = 0
 
+
 if os.path.isfile(dump_file):
     ext = dump_file.split('.')[-1]
     ext = '.'.join(dump_file.split('.')[-2:])
-    print ext
     if ext=="xml.bz2":
         os.system("bunzip2 \"%s\""%dump_file)
-        dump_file=dump_file.split('.')[:-1]
+        dump_file='.'.join(dump_file.split('.')[:-1])
     elif ext=="xml.gz":
         os.system("gunzip \"%s\""%dump_file)
-        dump_file=dump_file.split('.')[:-1]
+        dump_file='.'.join(dump_file.split('.')[:-1])
     elif ext.endswith(".xml"):
         pass
     else:
@@ -144,5 +145,4 @@ if not os.path.isfile(dump_file):
     sys.exit(1)
 
 output_sqlite = ask_output(dump_file)
- 
 os.system("python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite))
