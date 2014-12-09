@@ -509,6 +509,7 @@ class WikiFRTests(unittest.TestCase):
         tests=[
                 [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}",u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
                 [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}",u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
+                [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un",u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
             ]
 
         for t in tests:
