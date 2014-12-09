@@ -145,4 +145,6 @@ if not os.path.isfile(dump_file):
     sys.exit(1)
 
 output_sqlite = ask_output(dump_file)
-os.system("python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite))
+cmd="python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite)
+print cmd
+os.system(cmd)
