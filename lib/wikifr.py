@@ -165,7 +165,7 @@ class SaveFRTemplates:
                 return nb
         else:
             nb=m.group(1)
-            return "<a href=\"%s\">%s</a>"%(nb,nb)
+            return nb
 
     def fr_saveSieclesTemplates(self,text):
         return re.sub(self.fr_saveSieclesTempaltesRE,self.replsiecles,text)
