@@ -98,6 +98,7 @@ class SaveFRTemplates:
         text=self.fr_saveCitationTemplate(text)
         text=self.fr_saveNapoleonTemplates(text)
         text=self.fr_saveDateShortTemplates(text)
+        text=self.fr_saveJaponaisTemplates(text)
 #        text=self.fr_savePasspromotionnelTemplates(text)
 #        text=self.fr_savePassIneditTemplates(text)
 #        text=self.fr_savePasClairTemplates(text)
@@ -281,7 +282,7 @@ class SaveFRTemplates:
         return self.fr_saveTemperatureTemplatesRE.sub(ur'\1°C',text)
 
     def repljaponais(self,m):
-         return m.group(1)+" ("+m.group(2).replace("|",", ").replace("extra=","")+")"
+        return m.group(1)+" ("+m.group(2).replace("|",", ").replace("extra=","")+")"
 
     def fr_saveJaponaisTemplates(self,text):
         return re.sub(self.fr_saveJaponaisTemplatesRE,self.repljaponais,text)
