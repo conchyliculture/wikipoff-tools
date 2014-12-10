@@ -1,18 +1,24 @@
 # WikipOff-tools
 
 ## About
-This set of tools are required to build [Wikipedia](https://www.wikipedia.org/) databases for use with [WikipOff](https://github.com/conchyliculture/wikipoff) Android App
+This set of tools are required to build [Wikimedia](https://www.wikimedia.org/) databases for use with [WikipOff](https://github.com/conchyliculture/wikipoff) Android App.
 
 ## Getting Started
 
 0. You need python-dev libs to compile pylzma
-1. `make.sh` and follow instructions
-2. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/
+1. `python convert.py` and follow instructions
+2. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/` or your other storage (see [Wikipoff README](https://github.com/conchyliculture/wikipoff/blob/master/README.md))
+
+## Convert.py
+
+Use this script its purpose is to make you life easier:
+`python convert.py` and follow instructions
 
 ## WikiExtractor.py
 
 I've originally snatched this script from [Here](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor).
-Its purpose is to take a Wikipedia XML dump file and convert it to a sqlite database file.
+It's been VERY HEAVILY refactored for my needs.
+Its purpose is to take a Wikimedia XML dump file and convert it to a sqlite database file.
 It will:
 * Loop over each article and redirect page
 * Convert the wikicode to HTML (with the help of lib/wiki<lang>.py files)
@@ -42,11 +48,13 @@ This scripts helps tracking converting issues. It's able to parse the raw xml fi
 Examples:
 Show the HTML conversion output of an article with title `Algorithme` :
 
-    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml -l fr -t Algorithme
+    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml  -t Algorithme
 
 Show the raw wikicode article with title `Algorithme` :
 
-    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml -l fr -t Algorithme -r
+    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml r -t Algorithme -r
+
+The file `helper.sqlite` is required, and will be built if needed.
 
 ## split_db.py
 
