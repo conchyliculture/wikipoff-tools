@@ -210,7 +210,7 @@ def main():
     dest = OutputSqlite(output_file,wikimediatype=wikimediatype)
 
     worker = XMLworker.XMLworker(input_file,dest)  
-    print worker
+
     print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
 
     worker.run()
