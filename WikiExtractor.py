@@ -34,24 +34,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # =============================================================================
 
-"""Wikipedia Extractor:
-Extracts and cleans text from Wikipedia database dump and stores output in a
-sqlite database
-
-Usage:
-  WikiExtractor.py [options]
-
-Options:
-  -c, --compress        : compress output files using bzip
-  -b, --bytes= n[KM]    : put specified bytes per output file (default 500K)
-  -B, --base= URL       : base URL for the Wikipedia pages
-  -l, --link            : preserve links
-  -n NS, --ns NS        : accepted namespaces (separated by commas)
-  -o, --output= dir     : place output files in specified directory (default
-                          current)
-  -s, --sections	: preserve sections
-  -h, --help            : display this help and exit
-"""
 import sys
 sys.path.append("./lib")
 sys.path.append("./lib/python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.egg/")
@@ -216,8 +198,6 @@ def main():
     if not 'input_file' in locals():
         print("Please give me a wiki xml dump with -x or --xml")
         sys.exit()
-
-#    inputsize = os.path.getsize(input_file)
 
     if output_file is None or output_file=="":
         print "I need a filename for the destination sqlite file"
