@@ -95,7 +95,7 @@ languagedb="languages.sqlite"
 inputsize = 0
 
 class OutputSqlite:
-    def __init__(self, sqlite_file,sqlite_lang,max_page_count=None):
+    def __init__(self, sqlite_file,sqlite_lang,type="wikipedia",max_page_count=None):
         global dbversion
         self.sqlite_lang=sqlite_lang
         self.connlang = sqlite3.connect(sqlite_lang)
@@ -116,7 +116,7 @@ class OutputSqlite:
                                                                   title_to VARCHAR(255))''')
         self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
         self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
-        self.set_type("wikipedia")
+        self.set_type(type)
         self.set_version(version)
         self.conn.commit()
         self.curr_values=[]
