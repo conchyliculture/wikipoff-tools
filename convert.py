@@ -77,8 +77,7 @@ def ask_method():
 def ask_output(i):
     default,x,lost = i.rpartition(".xml")
     default=default+".sqlite"
-    print("")
-    res = raw_input("Please select output sqlite db output name:\n[%s] "%default)
+    res = raw_input("Please select output sqlite db output name:\n[%s] "%default) or default
     return res
 
 
