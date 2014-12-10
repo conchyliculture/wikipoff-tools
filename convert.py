@@ -80,6 +80,12 @@ def ask_output(i):
     res = raw_input("Please select output sqlite db output name:\n[%s] "%default) or default
     return res
 
+def ask_type(i):
+    default="wikipedia.org"
+    res = raw_input("Please choose wiki type (ex: 'elderscrolls.wikia'):\n[%s] "%default) or default
+    return res
+
+
 
 def download_url():
 
@@ -105,6 +111,8 @@ def select_path():
     readline.set_completer(pathCompleter)
     ans = raw_input("What file do you want? ")
     return ans
+
+
 
 prepare_env()
 
@@ -144,6 +152,7 @@ if not os.path.isfile(dump_file):
     sys.exit(1)
 
 output_sqlite = ask_output(dump_file)
-cmd="python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite)
+wikimediatype = ask_type(dump_file)
+cmd="python WikiExtractor.py  -x \"%s\" -d \"%s\" -t \"%s\""%(dump_file,output_sqlite,wikimediatype)
 print cmd
 os.system(cmd)

@@ -27,9 +27,7 @@ import unittest
 import traceback
 
 def is_allowed_title(title):
-    if title in [u"Modèle",u"Catégorie",u"Portail",u"Fichier",u"Wikipédia",u"Projet",u"Référence",u"MediaWiki",u"Aide",u"Module"]:
-        return False
-    return True
+    return title not in [u"Modèle",u"Catégorie",u"Portail",u"Fichier",u"Wikipédia",u"Projet",u"Référence",u"MediaWiki",u"Aide",u"Module"]
 
 class SaveFRTemplates:
     def __init__(self):

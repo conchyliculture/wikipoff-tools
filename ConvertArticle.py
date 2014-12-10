@@ -6,9 +6,9 @@ sys.path.append("./lib/python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.e
 import re
 import os
 import getopt
-import wikitools
-import wikiglobals
 import sqlite3
+from wikimedia import XMLworker
+from lxml import etree
 
 class OutputText:
     def __init__(self):
@@ -42,65 +42,6 @@ def get_pos_from_title(db,title):
         return 0
 
 
-
-### READER ###################################################################
-
-tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
-redirRE = re.compile(r'(?:.*?)<redirect title="(.+)"\s*/>')
-
-def process_data(input, output):
-    global prefix
-
-    page = []
-    id_ = None
-    inText = False
-    redirect = False
-    redir_title = ""
-    title=""
-    for line in input:
-        line = line.decode('utf-8')
-        tag = ''
-        if '<' in line:
-            m = tagRE.search(line)
-            if m:
-                tag = m.group(2)
-        if tag == 'page':
-            page = []
-            redirect = False
-        elif tag == 'id' and id_==None:
-            id_ = m.group(3)
-        elif tag == 'title':
-            title = m.group(3)
-        elif tag == 'redirect':
-            redirect = True
-            res=redirRE.match(line)
-            if (res):
-                redir_title=res.group(1)
-        elif tag == 'text':
-            inText = True
-            line = line[m.start(3):m.end(3)] + '\n'
-            page.append(line)
-            if m.lastindex == 4: # open-close
-                inText = False
-        elif tag == '/text':
-            if m.group(1):
-                page.append(m.group(1) + '\n')
-            inText = False
-        elif inText:
-            page.append(line)
-        elif tag == '/page':
-            sys.stdout.flush()
-            wikitools.WikiDocumentSQL(output, title, ''.join(page))
-            id_ = None
-            page = []
-            return
-        elif tag == 'base':
-            # discover prefix from the xml dump file
-            # /mediawiki/siteinfo/base
-            base = m.group(3)
-            prefix = base[:base.rfind("/")]
-            if wikiglobals.lang =="":
-                wikiglobals.lang=base.split(".wikipedia.org")[0].split("/")[-1]
             
 class OutputHelper:
     def __init__(self,sqlite_file):
@@ -163,7 +104,6 @@ def create_helper_db(input_xml,output_sql):
     for line in iter(inputstream.readline, ''):
         lol_python_is_shit=endpageRE.match(line)
         if lol_python_is_shit!=None:
-            #print("%d %s %d"%(id_,title,start))
             output.insert(id_,title,start)
             title=""
             id_=0
@@ -215,8 +155,9 @@ def main():
     script_name = os.path.basename(sys.argv[0])
 
     titles=[]
+    convert=True
     try:
-        long_opts = ["db=","--dumpfile=","--title=","--orig","--lang"]
+        long_opts = ["db=","--dumpfile=","--title=","--orig"]
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'd:f:t:rl:H:', long_opts)
     except getopt.GetoptError, e:
         print("ERROR : ",e)
@@ -231,17 +172,12 @@ def main():
         if opt in ('-t','--title'):
             titles=arg.split(",")
         if opt in ('-r',"--orig"):
-            wikiglobals.convert=False
-        if opt in ('-l',"--lang"):
-            wikiglobals.lang=arg
+            convert=False
     if not 'sqlite_file' in locals():
         print("Please give me a SQLite database file with indexes with -d")
         sys.exit()
     if not 'xmlfile' in locals():
         print("Please give me a XML wiki dump file with -f")
-        sys.exit()
-    if wikiglobals.lang=="":
-        print("If you don't specify a language with -l, you're gonna have a bad time")
         sys.exit()
 
     if not check_helper_db(sqlite_file):
@@ -257,8 +193,6 @@ def main():
 #        show_usage(script_name)
 #        sys.exit(4)
 
-    if not wikiglobals.keepLinks:
-        wikitools.ignoreTag('a')
 
     conn = sqlite3.connect(sqlite_file)
 
@@ -268,8 +202,14 @@ def main():
         if pos != 0:
             print pos
             io.seek(pos)
-            worker = OutputText()
-            process_data(io, worker)
+
+            dest = OutputText()
+            worker = XMLworker.XMLworker(io,dest,convert=convert)  
+            try:
+                worker.process_data()
+            except etree.XMLSyntaxError, e:
+                print "Whoops, your xml file looks bogus:\n"
+                print e.error_log
             worker.close()
         else:
             print "Can't find article with title %s in helper database : %s "%(title,sqlite_file)

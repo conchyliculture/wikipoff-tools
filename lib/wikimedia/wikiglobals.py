@@ -33,8 +33,4 @@ discardElements = set([
 
 selfClosingTags = [ 'br', 'hr', 'nobr', 'ref', 'references' ]
 
-lang=""
-
 placeholder_tags = { 'code':'codice'}
-
-convert=True

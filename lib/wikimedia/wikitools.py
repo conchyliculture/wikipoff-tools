@@ -2,23 +2,39 @@
 # -*- coding: utf-8 -*-
 import re
 import sys
-import wikifr
+from lang import *
 import wikiglobals
 from htmlentitydefs import name2codepoint
 
 
 toomanybr=re.compile(r'<br/>(<br/>(?:<br/>)+)')
 
-def is_allowed_title(title):
-    if wikiglobals.lang=="fr":
-        return wikifr.is_allowed_title(title)
-    return True
+
+class WikimediaTranslator():
+    def __init__(self,wiki='wikipedia',lang='en'):
+        self.lang=lang
+        self.wiki=wiki
+        self.set_save_func()
+
+    def set_save_func(self):
+        if self.wiki=='wikipedia':
+            if self.lang=="fr":
+                return wikifr.SaveFRTemplates().save
+
+        self.save =  lambda x: x
 
 
-def WikiDocumentSQL(out, title, text):
+    def get_is_allowed_title_func(self):
+        if self.wiki=='wikipedia':
+            if self.lang=="fr":
+                return wikifr.is_allowed_title
+
+        return wikien.is_allowed_title
+
+def WikiDocumentSQL(out, title, text,translator=WikimediaTranslator(),convert=True):
     buff=""
-    if wikiglobals.convert:
-        text = clean(text)
+    if convert:
+        text = clean(text,translator)
         for line in compact(text):
             buff += line.encode('utf-8')
         buff = toomanybr.sub(r'<br/><br/>',buff) 
@@ -198,11 +214,9 @@ def make_anchor_tag(match):
     else:
         return anchor
 
-def clean(text):
+def clean(text,translator):
 
-    if wikiglobals.lang=="fr":
-        save=wikifr.SaveFRTemplates()
-        text=save.save(text)
+    text = translator.save(text)
 
     # FIXME: templates should be expanded
     # Drop transclusions (template, parser functions)

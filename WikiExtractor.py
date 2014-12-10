@@ -58,19 +58,15 @@ sys.path.append("./lib/python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.e
 import gc
 import getopt
 import urllib
-import re
 import struct
 from cStringIO import StringIO
 import bz2
 import os.path
 import base64
 import sqlite3
-import wikitools
-import wikiglobals
 import pylzma
 from time import strftime
-import datetime
-
+from wikimedia import XMLworker
 #=========================================================================
 #
 # MediaWiki Markup Grammar
@@ -88,18 +84,14 @@ import datetime
 # Program version
 version = '2.5'
 dbversion = "0.0.0.1"
-languagedb="languages.sqlite"
 
 ##### Main function ###########################################################
 
 inputsize = 0
 
 class OutputSqlite:
-    def __init__(self, sqlite_file,sqlite_lang,type="wikipedia",max_page_count=None):
+    def __init__(self, sqlite_file,wikimediatype="wikipedia",max_page_count=None):
         global dbversion
-        self.sqlite_lang=sqlite_lang
-        self.connlang = sqlite3.connect(sqlite_lang)
-        self.curslang = self.connlang.cursor()
         self.sqlite_file=sqlite_file
         self.conn = sqlite3.connect(sqlite_file)
         self.conn.isolation_level="EXCLUSIVE"
@@ -116,7 +108,7 @@ class OutputSqlite:
                                                                   title_to VARCHAR(255))''')
         self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
         self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
-        self.set_type(type)
+        self.set_type(wikimediatype)
         self.set_version(version)
         self.conn.commit()
         self.curr_values=[]
@@ -127,13 +119,10 @@ class OutputSqlite:
     def insert_redirect(self,from_,to_):
         self.curs.execute("INSERT INTO redirects VALUES (?,?)",(from_,to_))
 
-    def set_lang(self,lang):
-        self.curslang.execute("SELECT english,local FROM languages WHERE code LIKE ?",(lang,))
-        e,l = self.curslang.fetchone()
-        self.curslang.close()
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-code',?)",(lang,))
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(l,))
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(e,))
+    def set_lang(self,lang_code,lang_local,lang_english):
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-code',?)",(lang_code,))
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang_local,))
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(lang_english,))
 
     def set_langlocal(self,lang):
         self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang,))
@@ -184,94 +173,16 @@ class OutputSqlite:
 
 
 
-### READER ###################################################################
-
-tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
-redirRE = re.compile(r'(?:.*?)<redirect title="(.+)"\s*/>')
-
-eta_every = 100
-
-def process_data(input, output):
-    global prefix
-    st = datetime.datetime.now() 
-    i=0
-    page = []
-    id = None
-    inText = False
-    redirect = False
-    redir_title = ""
-    for line in input:
-   #     print(input.tell())
-        line = line.decode('utf-8')
-        tag = ''
-        if '<' in line:
-            m = tagRE.search(line)
-            if m:
-                tag = m.group(2)
-        if tag == 'page':
-            page = []
-            redirect = False
-        elif tag == 'id' and not id:
-            id = m.group(3)
-        elif tag == 'title':
-            title = m.group(3)
-        elif tag == 'redirect':
-            redirect = True
-            res=redirRE.match(line)
-            if (res):
-                redir_title=res.group(1)
-        elif tag == 'text':
-            inText = True
-            line = line[m.start(3):m.end(3)] + '\n'
-            page.append(line)
-            if m.lastindex == 4: # open-close
-                inText = False
-        elif tag == '/text':
-            if m.group(1):
-                page.append(m.group(1) + '\n')
-            inText = False
-        elif inText:
-            page.append(line)
-        elif tag == '/page':
-            if redirect:
-                output.insert_redirect(title,redir_title)
-            else:
-                colon=title.find(":")
-                if colon>0:
-                    if not wikitools.is_allowed_title(title[0:colon]):
-                        continue
-                sys.stdout.flush()
-                wikitools.WikiDocumentSQL(output, title, ''.join(page))
-                i+=1
-                if i%eta_every == 0:
-                    percent =  (100.0 * input.tell()) / inputsize
-                    delta=((100-percent)*(datetime.datetime.now()-st).total_seconds())/percent
-                    status_s= "%.02f%% ETA=%s\r"%(percent, str(datetime.timedelta(seconds=delta)))
-                    sys.stdout.write(status_s)
-            id = None
-            page = []
-        elif tag == 'base':
-            # discover prefix from the xml dump file
-            # /mediawiki/siteinfo/base
-            base = m.group(3)
-            prefix = base[:base.rfind("/")]
-            if wikiglobals.lang =="":
-                wikiglobals.lang=base.split(".wikipedia.org")[0].split("/")[-1]
-                if wikiglobals.lang!="":
-                    print("Autodetected language : %s."%wikiglobals.lang)
-                    print("Will apply corresponding conversion rules from lib/wiki%s.py, if this files exists"%wikiglobals.lang)
-                    output.set_lang(wikiglobals.lang)
-
-### CL INTERFACE ############################################################
 
 def show_usage():
     print """Usage: python WikiExtractor.py  [options] -x wikipedia.xml
 Converts a wikipedia XML dump file into sqlite databases to be used in WikipOff
 
 Options:
-        -l, --lang      Set database language
+        -x, --xml       Input xml dump
         -d, --db        Output database file (default : 'wiki.sqlite') 
         -h, --help      Print this help
+        -t, --type      Wikimedia type (default: 'wikipedia')
 """
 
 def main():
@@ -279,14 +190,15 @@ def main():
     script_name = os.path.basename(sys.argv[0])
 
     try:
-        long_opts = ['help', 'lang=', "db=", "xml="]
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hl:x:d:', long_opts)
+        long_opts = ['help', 'lang=', "db=", "xml=",'type=']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hl:x:d:t:', long_opts)
     except getopt.GetoptError:
-        show_usage(script_name)
+        show_usage()
         sys.exit(1)
 
     compress = False
-    output_file="./wiki.sqlite"
+    output_file=""
+    wikimediatype="wikipedia"
 
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -298,15 +210,14 @@ def main():
             output_file = arg
         elif opt in ('-x','--xml'):
             input_file = arg
+        elif opt in ('-t','--type'):
+            wikimediatype = arg
 
     if not 'input_file' in locals():
         print("Please give me a wiki xml dump with -x or --xml")
         sys.exit()
 
-    if not wikiglobals.keepLinks:
-        wikiglobals.ignoreTag('a')
-
-    inputsize = os.path.getsize(input_file)
+#    inputsize = os.path.getsize(input_file)
 
     if output_file is None or output_file=="":
         print "I need a filename for the destination sqlite file"
@@ -316,15 +227,13 @@ def main():
         print("%s already exists. Won't overwrite it."%output_file)
         sys.exit(1)
 
-    if not os.path.isfile(languagedb):
-        print("%s doesn't exists. Please create it."%languagedb)
-        sys.exit(1)
+    dest = OutputSqlite(output_file,wikimediatype=wikimediatype)
 
-    input = open(input_file,"r")
+    worker = XMLworker.XMLworker(input_file,dest)  
+    print worker
     print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
-    worker = OutputSqlite(output_file,languagedb)
 
-    process_data(input, worker)
+    worker.run()
     worker.close()
 
 if __name__ == '__main__':
