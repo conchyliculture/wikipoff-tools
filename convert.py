@@ -3,6 +3,7 @@
 import sys
 import os
 import readline
+import lxml
 
 def download_file(url,dest=None):
     import urllib2
