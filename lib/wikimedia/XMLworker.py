@@ -136,7 +136,6 @@ class XMLworker():
 
     def run(self):
         try:
-            self.set_infos()
             self.process_data()
         except etree.XMLSyntaxError, e:
             print "Whoops, your xml file looks bogus:\n"
