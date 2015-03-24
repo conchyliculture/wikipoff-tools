@@ -3,10 +3,13 @@
 import re
 import sqlite3
 import os
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 import sys
 from lxml import etree
 import wikitools
 import datetime
+import getpass
 class XMLworker():
     def __init__(self,xml_file,dest,convert=True):
         self.languagedb="lib/wikimedia/languages.sqlite"
@@ -23,6 +26,8 @@ class XMLworker():
         self.is_allowed_title = self.translator.get_is_allowed_title_func()
 
         self.convert=convert
+
+        self.set_infos()
 
         if not os.path.isfile(self.languagedb):
             print("%s doesn't exists. Please create it."%self.languagedb)
@@ -77,6 +82,10 @@ class XMLworker():
         wiki_infos['lang-code']=wiki_infos['lang']
         wiki_infos['lang-local']=l
         wiki_infos['lang-english']=e
+        wiki_infos['type']=wiki_infos['sitename']
+        wiki_infos['author']=getpass.getuser()+" @ Wikipoff-tools"
+        wiki_infos['source']= wiki_infos['base']
+        pp.pprint(wiki_infos) 
         return wiki_infos 
 
     def process_data(self):
@@ -124,9 +133,6 @@ class XMLworker():
                         sys.stdout.flush()
 
                 element.clear()
-    def set_infos(self):
-        self.dest.set_lang(self.infos['lang-code'],self.infos['lang-local'],self.infos['lang-english'],)
-
 
     def run(self):
         try:
@@ -135,10 +141,13 @@ class XMLworker():
         except etree.XMLSyntaxError, e:
             print "Whoops, your xml file looks bogus:\n"
             print e.error_log
-            self.close()
 
     def close(self):
         self.dest.close()
         pass
 
+
+    def set_infos(self):
+
+        self.dest.set_metadata(self.infos)
 

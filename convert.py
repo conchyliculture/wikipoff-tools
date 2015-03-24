@@ -4,6 +4,7 @@ import sys
 import os
 import readline
 import lxml
+import getopt
 
 def download_file(url,dest=None):
     import urllib2
@@ -63,17 +64,18 @@ def prepare_env():
 
 
 def ask_method():
-    print("")
-    print("Please select where to get Wiki dump from: ")
-    print("")
-    print("[1] Provide URL to dump")
-    print("[2] Provide a path to dump")
-    print("")
-    try: 
-        method = int(raw_input('Please select: '))
-        return method
-    except ValueError:
-        return 0
+    while True:
+        print("")
+        print("Please select where to get Wiki dump from: ")
+        print("")
+        print("[1] Provide URL to dump")
+        print("[2] Provide a path to dump")
+        print("")
+        try: 
+            method = int(raw_input('Please select: '))
+            return method
+        except ValueError:
+            return 0
 
 def ask_output(i):
     default,x,lost = i.rpartition(".xml")
@@ -88,9 +90,10 @@ def ask_type(i):
 
 
 
-def download_url():
+def download_url(url=None):
+    if url is None:
+        url = raw_input("Please enter the URL: ")
 
-    url = raw_input("Please enter the URL: ")
     file_name = download_file(url)
 
     return file_name
@@ -113,47 +116,80 @@ def select_path():
     ans = raw_input("What file do you want? ")
     return ans
 
+def show_usage():
+    print "lol"
 
-
-prepare_env()
-
-method=0
-dump_file=""
-
-while method == 0:
-    method = ask_method()
-    if method == 1:
-        dump_file = os.path.join(os.getcwd(), download_url())
-    elif method == 2:
-        dump_file = select_path()
-    else:
-        method = 0
-
-
-if os.path.isfile(dump_file):
-    ext = dump_file.split('.')[-1]
-    ext = '.'.join(dump_file.split('.')[-2:])
-    if ext=="xml.bz2":
-        os.system("bunzip2 \"%s\""%dump_file)
-        dump_file='.'.join(dump_file.split('.')[:-1])
-    elif ext=="xml.gz":
-        os.system("gunzip \"%s\""%dump_file)
-        dump_file='.'.join(dump_file.split('.')[:-1])
-    elif ext.endswith(".xml"):
-        pass
-    else:
-        print("I only know about .xml, .xml.bz2 or .xml.gz files")
+def main():
+    try:
+        long_opts = ['path=', "url=","output="]
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'p:u:o:', long_opts)
+    except getopt.GetoptError:
+        show_usage()
         sys.exit(1)
-else:
-    print("Unable to find %s, exiting."%dump_file)
-    sys.exit(1)
 
-if not os.path.isfile(dump_file):
-    print("Can't find expected %s after decompressing, exiting"%dump_file)
-    sys.exit(1)
+    method=0
+    url=None
+    o=None
+    xml_path = None
+    dump_file=None
 
-output_sqlite = ask_output(dump_file)
-wikimediatype = ask_type(dump_file)
-cmd="python WikiExtractor.py  -x \"%s\" -d \"%s\" -t \"%s\""%(dump_file,output_sqlite,wikimediatype)
-print cmd
-os.system(cmd)
+    for opt, arg in opts:
+        if opt in ('-p', '--path'):
+            xml_path=arg
+            method=2
+        if opt in ('-u', '--url'):
+            url=arg
+            method=1
+        if opt in ('-o', '--output'):
+            o = arg
+
+    prepare_env()
+
+    if method==0:
+        method = ask_method()
+
+
+
+    while True:
+        if method == 1:
+            dump_file = os.path.join(os.getcwd(), download_url(url))
+            method = 3
+        elif method == 2:
+            dump_file = xml_path or select_path()
+            method = 3
+        elif method == 3:
+            break
+        else:
+
+    print(dump_file)
+
+    output_sqlite = o or ask_output(dump_file) 
+
+
+    if os.path.isfile(dump_file):
+        ext = dump_file.split('.')[-1]
+        ext = '.'.join(dump_file.split('.')[-2:])
+        if ext=="xml.bz2":
+            os.system("bunzip2 \"%s\""%dump_file)
+            dump_file='.'.join(dump_file.split('.')[:-1])
+        elif ext=="xml.gz":
+            os.system("gunzip \"%s\""%dump_file)
+            dump_file='.'.join(dump_file.split('.')[:-1])
+        elif ext.endswith(".xml"):
+            pass
+        else:
+            print("I only know about .xml, .xml.bz2 or .xml.gz files")
+            sys.exit(1)
+    else:
+        print("Unable to find %s, exiting."%dump_file)
+        sys.exit(1)
+
+    if not os.path.isfile(dump_file):
+        print("Can't find expected %s after decompressing, exiting"%dump_file)
+        sys.exit(1)
+
+    cmd="python WikiExtractor.py  -x \"%s\" -d \"%s\""%(dump_file,output_sqlite)
+    print cmd
+    os.system(cmd)
+
+main()

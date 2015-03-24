@@ -72,13 +72,19 @@ dbversion = "0.0.0.1"
 inputsize = 0
 
 class OutputSqlite:
-    def __init__(self, sqlite_file,wikimediatype="wikipedia",max_page_count=None):
+
+    REQUIRED_INFO_TAGS=['lang-code','lang-local','lang-english',
+                        'type', 'source','author'
+            ]
+
+    def __init__(self, sqlite_file,max_page_count=None):
         global dbversion
         self.sqlite_file=sqlite_file
         self.conn = sqlite3.connect(sqlite_file)
         self.conn.isolation_level="EXCLUSIVE"
         self.curs = self.conn.cursor()
         self.curs.execute("PRAGMA synchronous=NORMAL")
+        self.curs.execute("PRAGMA journal_mode=MEMORY")
         if (max_page_count!=None):
             self.set_max_page_count(max_page_count)
 
@@ -89,12 +95,27 @@ class OutputSqlite:
                                                                   title_from VARCHAR(255) NOT NULL,
                                                                   title_to VARCHAR(255))''')
         self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
-        self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
-        self.set_type(wikimediatype)
-        self.set_version(version)
         self.conn.commit()
         self.curr_values=[]
         self.max_inserts=100
+
+    def set_metadata(self,infos):
+        self.check_required_infos(infos)
+
+        self.set_lang(infos['lang-code'],infos['lang-local'],infos['lang-english'])
+        self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
+        self.set_version(version)
+        self.set_source(infos['source'])
+        self.set_author(infos['author'])
+        self.set_type(infos['type'])
+
+
+    def check_required_infos(self,infos):
+        for key in self.REQUIRED_INFO_TAGS:
+            if (not infos.has_key(key)):
+                print "We lack required infos : %s"%key
+                sys.exit(1)
+
 
     def set_max_page_count(self,max_page_count):
         self.curs.execute("PRAGMA max_page_count=%d"%max_page_count)
@@ -120,6 +141,12 @@ class OutputSqlite:
 
     def set_type(self,stype):
         self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('type',?)",(stype,))
+
+    def set_author(self,stype):
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('author',?)",(stype,))
+
+    def set_source(self,stype):
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('source',?)",(stype,))
 
     def reserve(self,size):
         pass
@@ -172,28 +199,23 @@ def main():
     script_name = os.path.basename(sys.argv[0])
 
     try:
-        long_opts = ['help', 'lang=', "db=", "xml=",'type=']
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hl:x:d:t:', long_opts)
+        long_opts = ['help', "db=", "xml=",'type=']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hx:d:t:', long_opts)
     except getopt.GetoptError:
         show_usage()
         sys.exit(1)
 
     compress = False
     output_file=""
-    wikimediatype="wikipedia"
 
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             show_usage()
             sys.exit()
-        elif opt in ('-l','--lang'):
-            wikiglobals.lang = arg
         elif opt in ('-d', '--db'):
             output_file = arg
         elif opt in ('-x','--xml'):
             input_file = arg
-        elif opt in ('-t','--type'):
-            wikimediatype = arg
 
     if not 'input_file' in locals():
         print("Please give me a wiki xml dump with -x or --xml")
@@ -207,7 +229,7 @@ def main():
         print("%s already exists. Won't overwrite it."%output_file)
         sys.exit(1)
 
-    dest = OutputSqlite(output_file,wikimediatype=wikimediatype)
+    dest = OutputSqlite(output_file)
 
     worker = XMLworker.XMLworker(input_file,dest)  
 

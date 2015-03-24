@@ -9,7 +9,6 @@ import sqlite3
 import getopt
 import datetime
 from WikiExtractor import OutputSqlite 
-languagedb="languages.sqlite"
 
 nb_select=100
 
@@ -24,11 +23,17 @@ and won't copy on your SDCard.
 This script will try to 
 """
 
+def load_metadata(c):
+    res={}
+    for row in c.execute('SELECT * FROM metadata'):
+        res[row[0]]=row[1]
+    return res
+
 
 def main():
     try:
-        long_opts = ['size=', "db=","lang="]
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 's:d:l:', long_opts)
+        long_opts = ['size=', "db="]
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 's:d:', long_opts)
     except getopt.GetoptError:
         show_usage()
         sys.exit(1)
@@ -38,12 +43,7 @@ def main():
             desired_size=float(arg)
         if opt in ('-d', '--db'):
             sqlite_file=arg
-        if opt in ('-l', '--lang'):
-            lang=arg
 
-    if not 'lang' in locals():
-        print("If you don't specify a language with -l, you're gonna have a bad time")
-        sys.exit()
 
     if not 'sqlite_file' in locals():
         print("Please give me a sqlite file to split with -d or --db")
@@ -56,10 +56,6 @@ def main():
         print("No. That's not fun.")
         sys.exit(666)
 
-    if not os.path.isfile(languagedb):
-        print("%s doesn't exists. Please create it."%languagedb)
-        sys.exit(1)
-
     lolpython=re.compile(r'^(.+)\.sqlite$')
     srsly_python_go_home_you_are_drunk=lolpython.match(sqlite_file)
     root_name="wiki"
@@ -71,7 +67,7 @@ def main():
 
 
     input_db_size=os.stat(sqlite_file).st_size
-    max_main_table_size=desired_size*90/100 # We need space for indexes and FTS table
+    max_main_table_size=desired_size*80/100 # We need space for indexes and FTS table
     final_db_count=math.ceil(input_db_size/max_main_table_size)
     if final_db_count==1:
         print "no need to split"
@@ -90,8 +86,9 @@ def main():
     offset=0
     row_count=curs_input.execute("SELECT count(*) from articles").fetchone()[0]
     curr_output_sqlitefile=root_name+"-%d.sqlite"%curr_index
-    curr_output = OutputSqlite(curr_output_sqlitefile,languagedb,max_output_page_count)
-    curr_output.set_lang(lang)
+    curr_output = OutputSqlite(curr_output_sqlitefile,max_output_page_count)
+    metadata=load_metadata(curs_input)
+    curr_output.set_metadata(metadata)
     while offset < row_count:
         res=curs_input.execute("SELECT title,text FROM articles LIMIT %d OFFSET %d "%(nb_select,offset))
         for t,tt in res:
@@ -107,7 +104,8 @@ def main():
                     curr_index+=1
                     curr_output_sqlitefile=root_name+"-%d.sqlite"%curr_index
                     print "Opening new DB : %s"%curr_output_sqlitefile
-                    curr_output = OutputSqlite(curr_output_sqlitefile,languagedb,max_output_page_count)
+                    curr_output = OutputSqlite(curr_output_sqlitefile,max_output_page_count)
+                    curr_output.set_metadata(metadata)
         percent = offset*100.0/row_count
         delta=((100-percent)*(datetime.datetime.now()-st).total_seconds())/percent
         status_s= "%.02f%% ETA=%s\r"%(percent, str(datetime.timedelta(seconds=delta)))
