@@ -162,8 +162,6 @@ def main():
         else:
             ask_method()
 
-    print(dump_file)
-
     output_sqlite = o or ask_output(dump_file) 
 
 
