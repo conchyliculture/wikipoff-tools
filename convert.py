@@ -163,6 +163,13 @@ def main():
             ask_method()
 
     output_sqlite = o or ask_output(dump_file) 
+    if os.path.isfile(output_sqlite):
+        resri = raw_input("%s already exists, overwrite ? [y/N]"%output_sqlite)
+        if resri=="" or resri=="n" or resri=="N":
+            print("Exiting.")
+            sys.exit(0)
+        else:
+            os.remove(output_sqlite)
 
 
     if os.path.isfile(dump_file):
