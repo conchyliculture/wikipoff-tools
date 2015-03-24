@@ -13,28 +13,33 @@ def download_file(url,dest=None):
         file_name=dest
     else:
         file_name = url.split('/')[-1]
-        if os.path.isfile(file_name):
-            raw_input("%s already exists, overwrite?"%file_name)
-    u = urllib2.urlopen(url)
-    f = open(file_name, 'wb')
-    meta = u.info()
-    file_size = int(meta.getheaders("Content-Length")[0])
-    print "Downloading: %s Bytes: %s" % (file_name, file_size)
+    do_dl = True
+    if os.path.isfile(file_name):
+        resri = raw_input("%s already exists, overwrite? [y/N]"%file_name)
+        if resri=="" or resri=="n" or resri=="N":
+            do_dl = False
 
-    file_size_dl = 0
-    block_sz = 8192
-    while True:
-        buffer = u.read(block_sz)
-        if not buffer:
-            break
+    if do_dl: 
+        u = urllib2.urlopen(url)
+        f = open(file_name, 'wb')
+        meta = u.info()
+        file_size = int(meta.getheaders("Content-Length")[0])
+        print "Downloading: %s Bytes: %s" % (file_name, file_size)
 
-        file_size_dl += len(buffer)
-        f.write(buffer)
-        status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
-        status = status + chr(8)*(len(status)+1)
-        print status,
+        file_size_dl = 0
+        block_sz = 8192
+        while True:
+            buffer = u.read(block_sz)
+            if not buffer:
+                break
 
-    f.close()
+            file_size_dl += len(buffer)
+            f.write(buffer)
+            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+            status = status + chr(8)*(len(status)+1)
+            print status,
+
+        f.close()
     return file_name 
 
 def prepare_env():
@@ -147,8 +152,6 @@ def main():
 
     if method==0:
         method = ask_method()
-
-
 
     while True:
         if method == 1:
