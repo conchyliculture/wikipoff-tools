@@ -10,3 +10,5 @@ srsly_google
 *journal
 managedb.py
 *.rb
+*.bz2
+*.gz
