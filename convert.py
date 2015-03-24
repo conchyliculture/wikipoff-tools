@@ -160,6 +160,7 @@ def main():
         elif method == 3:
             break
         else:
+            ask_method()
 
     print(dump_file)
 
