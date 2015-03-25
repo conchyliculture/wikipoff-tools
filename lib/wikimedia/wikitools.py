@@ -20,7 +20,9 @@ class WikimediaTranslator():
         if self.wiki=='wikipedia':
             if self.lang=="fr":
                 self.save = wikifr.SaveFRTemplates().save
+                return
         self.save =  lambda x: x
+
 
 
     def get_is_allowed_title_func(self):
@@ -30,9 +32,12 @@ class WikimediaTranslator():
 
         return wikien.is_allowed_title
 
-def WikiDocumentSQL(out, title, text,translator=WikimediaTranslator(),convert=True):
+def WikiDocumentSQL(out, title, text,translator,convert=True):
     buff=""
     if convert:
+        if translator == None:
+            print "You asked for conversion, and gave me no translator, wtf is wrong with you"
+            sys.exit
         text = clean(text,translator)
         for line in compact(text):
             buff += line.encode('utf-8')
