@@ -24,6 +24,9 @@ class OutputText:
     def close(self):
         pass
 
+    def set_metadata(self,infos):
+        pass
+
 def get_pos_from_id(db,id_):
     c = db.cursor()
     c.execute("SELECT position FROM indexes WHERE id=?",(id_,))
