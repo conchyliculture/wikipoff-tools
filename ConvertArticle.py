@@ -25,7 +25,10 @@ class OutputText:
         pass
 
     def set_metadata(self,infos):
-        pass
+        self.infos = infos
+    
+    def get_metadata(self):
+        return self.infos
 
 def get_pos_from_id(db,id_):
     c = db.cursor()
@@ -54,9 +57,20 @@ class OutputHelper:
         self.curs = self.conn.cursor()
         self.curs.execute("PRAGMA synchronous=NORMAL")
         self.curs.execute('''CREATE TABLE IF NOT EXISTS indexes ( id INTEGER PRIMARY KEY, title VARCHAR(255), position INTEGER);''')
+        self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
         self.conn.commit()
         self.curr_values=[]
         self.max_inserts=100
+
+    def set_metadata(self,infos):
+        self.set_type(infos['type'])
+        self.set_lang(infos['lang-code'])
+
+    def set_lang(self,lang_code,lang_local,lang_english):
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-code',?)",(lang_code,))
+
+    def set_type(self,stype):
+        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('type',?)",(stype,))
 
     def check(self):
         res=self.curs.execute("SELECT COUNT(*) FROM indexes").fetchone()[0]
@@ -96,15 +110,33 @@ def create_helper_db(input_xml,output_sql):
     inputstream=open(input_xml,"r")
     id_=0
     title=""
+    infos = dict()
     start=0
     revision=False
+    baseRE = re.compile(ur'<mediawiki.*xml:lang=\"(.+)\"')
+
     endpageRE=re.compile(r'^\s*<\/page>\s*$')
     idRE=re.compile(r'^\s*<id>(\d+)<\/id>\s*$')
     startpageRE=re.compile(r'^\s*<page>\s*$')
     titleRE=re.compile(r'^\s*<title>(.+)<\/title>\s*')
     revisionRE=re.compile(r'\s*<revision>$')
     curpos=0
+
+    base = inputstream.readline()
+    srsly_python_get_some_re_in_the_language = baseRE.match(line)
+    if srsly_python_get_some_re_in_the_language is None:
+        print "Input is not a mediawiki xml file? Should start with '<mediawiki' and contain xml:lang=\"somelang\""
+        sys.exit(1)
+    else:
+        infos['lang'] = res.group(1)
+        infos['type'] = "wikimedia"
+        output.set_metadata(infos)
+
     for line in iter(inputstream.readline, ''):
+
+        if lol_python_is_shit!=None:
+            url=srsly_python_get_some_re_in_the_language.group(1)
+
         lol_python_is_shit=endpageRE.match(line)
         if lol_python_is_shit!=None:
             output.insert(id_,title,start)
@@ -198,6 +230,10 @@ def main():
 
 
     conn = sqlite3.connect(sqlite_file)
+    curs = conn.cursor()
+    infos=dict()
+    infos['type'] = curs.execute("SELECT value FROM metadata WHERE key ='type'").fetchone()[0]
+    infos['lang'] = curs.execute("SELECT value FROM metadata WHERE key ='lang-code'").fetchone()[0]
 
     for title in titles:
         io=open(xmlfile)
@@ -207,6 +243,7 @@ def main():
             io.seek(pos)
 
             dest = OutputText()
+            dest.set_metadata(infos)
             worker = XMLworker.XMLworker(io,dest,convert=convert)  
             try:
                 worker.process_data()

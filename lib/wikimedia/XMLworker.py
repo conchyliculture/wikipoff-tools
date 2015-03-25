@@ -16,8 +16,8 @@ class XMLworker():
         self.xml_file=xml_file
         self.dest=dest
         if type(xml_file)==file:
-            self.infos={'lang':None}
-            self.wikitype=None
+            self.infos=dest.get_metadata()
+            self.wikitype=self.infos["type"]
         else:
             self.infos=self.get_infos()
             self.wikitype=self.guess_type()
@@ -122,7 +122,7 @@ class XMLworker():
                     if colon>0:
                         if not self.is_allowed_title(wikiarticle['title'][0:colon]):
                             continue
-                    wikitools.WikiDocumentSQL(self.dest, wikiarticle['title'], wikiarticle['text'],convert=self.convert)
+                    wikitools.WikiDocumentSQL(self.dest, wikiarticle['title'], wikiarticle['text'],self.translator,convert=self.convert)
                     wikiarticle={}
                     i+=1
                     if i%eta_every == 0:
