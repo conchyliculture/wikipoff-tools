@@ -19,8 +19,7 @@ class WikimediaTranslator():
     def set_save_func(self):
         if self.wiki=='wikipedia':
             if self.lang=="fr":
-                return wikifr.SaveFRTemplates().save
-
+                self.save = wikifr.SaveFRTemplates().save
         self.save =  lambda x: x
 
 
