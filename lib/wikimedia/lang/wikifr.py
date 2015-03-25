@@ -38,7 +38,7 @@ class SaveFRTemplates:
         self.fr_saveDateTemplatesRE=re.compile(ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateShortTemplatesRE=re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveLangTemplatesRE=re.compile(r'{{(lang(?:ue)?(?:-\w+)?(?:\|[^}\|]+)+)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveUnitsTemplatesRE=re.compile(ur'{{unit.\|([^|{}]+(?:\|[^{}[|]*)*)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveUnitsTemplatesRE=re.compile(ur'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveTemperatureTemplatesRE=re.compile(ur'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveRefIncTemplatesRE=re.compile(ur'{{Référence [^|}]+\|([^|]+)}}',re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
         self.fr_saveNumeroTemplatesRE=re.compile(ur'{{(numéro|n°|nº)}}',re.IGNORECASE)
@@ -60,7 +60,7 @@ class SaveFRTemplates:
         self.fr_saveDepuisQuandTemplatesRE=re.compile(r'{{Depuis Quand\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_saveQuiQuoiTemplatesRE=re.compile(r'{{(?:Qui|Lequel|combien|enquoi|en quoi|lesquels|laquelle|lesquelles|par qui|parqui|pour qui)\|([^\|]+)}}', re.IGNORECASE)
         self.fr_savestyleTemplatesRE=re.compile(r'{{style\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveFormatnumTemplatesRE=re.compile(r'{{(?:formatnum|nombre|num|nau):([0-9.,]+)}}', re.IGNORECASE)
+        self.fr_saveFormatnumTemplatesRE=re.compile(r'{{(?:formatnum):([0-9.,]+)}}', re.IGNORECASE)
         self.fr_saveWeirdNumbersTemplatesRE=re.compile(r'{{((?:(exp|ind)\|[^}]+)|\d|e|1er|1re|2nd|2nde)}}', re.IGNORECASE)
         self.fr_saveCouleursTemplatesRE=re.compile(r'{{(rouge|bleu|vert|jaune|orange|gris|marron|rose)\|([^\|}]+)}}', re.IGNORECASE)
         self.fr_saveCodeTemplatesRE=re.compile(r'{{code\|([^\|}]+)}}', re.IGNORECASE)
@@ -483,7 +483,12 @@ class WikiFRTests(unittest.TestCase):
                 [u"{{Unité|1234567,89}}","1 234 567.89"],
                 [u"{{Unité|1.23456789|e=15}}",u"1.23456789×10<sup>15</sup>"],
                 [u"{{Unité|10000|km}}",u"10 000 km"],
+                [u"{{nombre|8|[[bit]]s}}",u"8 [[bit]]s"],
+                [u"{{nombre|1000|[[yen]]s}}",u"1 000 [[yen]]s"],
+                [u"{{nombre|9192631770|périodes}}",u"9 192 631 770 périodes"],
+                [u"{{nombre|3620|hab. par km|2}}",u"3 620 hab. par km<sup>2</sup>"],
                 [u"{{Unité|10000|km/h}}","10 000 km/h"],
+
                 [u"{{Unité|10000|km|2}}","10 000 km<sup>2</sup>"],
                 [u"{{Unité|10000|m|3}}","10 000 m<sup>3</sup>"],
                 [u"{{Unité|10000|km||h|-1}}",u"10 000 km⋅h<sup>-1</sup>"],
