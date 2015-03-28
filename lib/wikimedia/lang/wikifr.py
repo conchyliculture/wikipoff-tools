@@ -34,6 +34,7 @@ class SaveFRTemplates:
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
         # TODO
+        self.fr_saveNobrTemplatesRE=re.compile(ur'{{nobr\|((?:[^{]+)|(?:[^{]*{{[^}]+}}[^}]*))}}',re.IGNORECASE|re.UNICODE)
         self.fr_saveHeureTemplatesRE=re.compile(ur'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateTemplatesRE=re.compile(ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateShortTemplatesRE=re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
@@ -80,6 +81,7 @@ class SaveFRTemplates:
 		self.locale_set = True
         text=t
         text=self.fr_saveHeureTemplates(text)
+        text=self.fr_saveNobrTemplates(text)
         text=self.fr_saveTemperatureTemplates(text)
         text=self.fr_saveFormatnumTemplates(text)
         text=self.fr_saveUnitsTemplates(text)
@@ -120,6 +122,15 @@ class SaveFRTemplates:
         return res.strip()
     def fr_saveHeureTemplates(self,text):
         return re.sub(self.fr_saveHeureTemplatesRE,self.replheures,text)
+
+    def replnobr(self,m):
+        pute = m.group(1)
+        return "<span class=\"nowrap\">%s</span>"%pute
+
+    def fr_saveNobrTemplates(self,text):
+        #return self.fr_saveNobrTemplatesRE.sub(ur'\1',text)
+        #return self.fr_saveNobrTemplatesRE.sub(ur'<span class="nowrap">\1</span>',text)
+        return re.sub(self.fr_saveNobrTemplatesRE,self.replnobr,text)
     def fr_saveNapoleonTemplates(self,text):
         return self.fr_saveNapoleonTemplatesRE.sub(ur'Napoléon I<sup>er</sup>',text)
     def fr_saveDouteuxTemplates(self,text):
@@ -190,7 +201,6 @@ class SaveFRTemplates:
             except ValueError as e:
                 # Failing humbly...
                 raise e
-                print "pute"
                 return nb
         else:
             nb=m.group(1)
@@ -517,6 +527,15 @@ class WikiFRTests(unittest.TestCase):
 
         for t in tests:
             self.assertEqual(self.sfrt.save(t[0]), t[1])
+
+    def testNobr(self):
+        tests=[
+                [u"{{nobr|[[préfixe binaire|préfixes binaires]]}}",u"<span class=\"nowrap\">[[préfixe binaire|préfixes binaires]]</span>"],
+                [u"{{nobr|93,13x2{{exp|30}} octets}}",u"<span class=\"nowrap\">93,13x2<sup>30</sup> octets</span>"]
+            ]
+        for t in tests:
+            self.assertEqual(self.sfrt.save(t[0]), t[1])
+
 
     def testHeures(self):
         tests=[
