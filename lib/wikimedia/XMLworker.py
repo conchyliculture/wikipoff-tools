@@ -111,7 +111,6 @@ class XMLworker():
             elif tag=="redirect":
                 wikiarticle['redirect']=True
             elif tag=="page": # end of article
-#                print wikiarticle['title']
                 if wikiarticle.has_key('redirect'):
                     self.dest.insert_redirect(wikiarticle['title'],wikiarticle['redirect'])
                     wikiarticle={}

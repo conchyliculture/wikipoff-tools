@@ -25,9 +25,9 @@ keepSections = True
 #
 discardElements = set([
         'gallery', 'timeline', 'noinclude', 'pre',
-        'table', 'tr', 'td', 'th', 'caption',
+#        'table', 'tr', 'td', 'th', 'caption', 'dl', 'dt','dd',
         'form', 'input', 'select', 'option', 'textarea',
-        'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
+        'ul', 'li', 'ol', 'menu', 'dir',
         'ref', 'references', 'img', 'imagemap', 'source'
         ])
 

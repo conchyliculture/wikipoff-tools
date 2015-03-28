@@ -218,9 +218,158 @@ def make_anchor_tag(match):
     else:
         return anchor
 
+def make_tables(text):
+    out=""
+    td_history = []; # Is currently a td tag open?
+    last_tag_history = []; # Save history of last lag activated (td, th or caption)
+    tr_history = []; # Is currently a tr tag open?
+    tr_attributes = []; # history of tr attributes
+    has_opened_tr = []; # Did this table open a <tr> element?
+    indent_level = 0; # indent level of the table
+    startRE =r'^(:*)\{\|(.*)$'
+
+
+    for outline in text.split('\n'):
+        line = outline.strip()
+        if line == '':
+            out = out + outline + "\n"
+            continue
+        firstchar=line[0]
+
+        #print "## %s /%d"%(line,len(td_history))
+        #print "<<<<%s>>>>"%out
+        res = re.match(startRE,line)
+        if res:
+         #   print "pute 1"
+            indent_level = len(res.group(1))
+            attributes = res.group(2)
+
+            outline ='<dl><dd>'*indent_level + "<table%s"%attributes
+            td_history.append(False)
+            last_tag_history.append("")
+            tr_history.append(False)
+            tr_attributes.append("")
+            has_opened_tr.append(False)
+        elif len(td_history) == 0:
+            #print "pute 2"
+            out = out + outline+"\n" 
+            continue
+        elif line[0:2] == "|}":
+            #print "pute 3"
+            #print out
+            #print "pute 3"
+            line = "</table>\n"+line[2:]
+            last_tag = last_tag_history.pop()
+
+            if not has_opened_tr.pop():
+                line = "<tr><td></td></tr>\n%s"%line
+
+            if tr_history.pop():
+                line = "</tr>\n"+line
+
+            if td_history.pop():
+                line = "</%s>%s"%(last_tag,line)
+
+            tr_attributes.pop()
+
+            outline =line + '</dd></dl>'*indent_level 
+
+        elif line[0:2] == "|-":
+            #print "pute 4"
+            line = re.sub(r'\|-+','',line)
+            attributes = line
+
+            tr_attributes.pop()
+            tr_attributes.append(attributes)
+
+            line=""
+            last_tag = last_tag_history.pop()
+
+            has_opened_tr.pop()
+            has_opened_tr.append(True)
+
+            if tr_history.pop():
+                line= "</tr>\n"
+
+            if td_history.pop():
+                line = "</%s>%s"%(last_tag,line)
+
+            outline = line
+
+            tr_history.append(False)
+            td_history.append(False)
+            last_tag_history.append("")
+
+        elif (firstchar == "|" or firstchar=="!" or line[0:2]=="|+"):
+            #print "pute 5"
+            if line[0:2]=="|+":
+                firstchar = "+"
+                line = line[1:]
+
+            line = line[1:]
+
+            if firstchar=="!":
+                line.replace('!!','||')
+
+            cells = line.split("||")
+            outline = ""
+
+            for cell in cells:
+                previous=""
+                if firstchar != "+":
+                    tr_after = tr_attributes.pop() 
+                    if (not tr_history.pop()):
+                        previous="<tr%s>\n"%tr_after
+                    tr_history.append(True)
+                    tr_attributes.append("")
+                    has_opened_tr.pop()
+                    has_opened_tr.append(True)
+
+                last_tag = last_tag_history.pop()
+                if (td_history.pop()):
+                    previous="</%s>\n%s"%(last_tag,previous)
+
+                if firstchar == "|":
+                    last_tag="td"
+                elif firstchar == "!":
+                    last_tag = 'th'
+                elif firstchar == "+":
+                    last_tag = "caption"
+                else:
+                    last_tag=""
+
+                last_tag_history.append(last_tag)
+
+                cell_data = cell.split("|",2)
+                if cell_data[0].find("[[") > 0:
+                    cell ="%s<%s>%s"%(previous,last_tag,cell)
+                elif len(cell_data)==1:
+                    cell = "%s<%s>%s"%(previous,last_tag,cell_data[0])
+                else:
+                    attribute = cell_data[0]
+                    cell = "%s<%s%s>%s"%(previous,last_tag,attributes,cell_data[0])
+
+                outline = outline + cell
+                td_history.append(True)
+
+        out = out + outline+"\n"
+
+    while (len(td_history) >0 ):
+        if td_history.pop():
+            out = out+"</td>"
+        if (tr_history.pop() if tr_history else None):
+            out = out+"</tr>"
+        if not (has_opened_tr.pop() if has_opened_tr else None):
+            out = out +"<tr><td></td></tr>"
+
+        out = out +"</table>"
+
+    return out
+
 def clean(text,translator):
 
     text = translator.save(text)
+    text = make_tables(text)
 
     # FIXME: templates should be expanded
     # Drop transclusions (template, parser functions)
@@ -329,7 +478,7 @@ def compact(text):
             title = m.group(2)
             lev = len(m.group(1))
             if wikiglobals.keepSections:
-                page.append("<h%d>%s</h%d>" % (lev, title, lev))
+                page.append("\n\n<h%d>%s</h%d>" % (lev, title, lev))
             else:
                 if title and title[-1] not in '!?':
                     title += '.'
