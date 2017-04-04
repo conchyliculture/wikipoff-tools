@@ -10,32 +10,37 @@ from lxml import etree
 import wikitools
 import datetime
 import getpass
+import tools
 
-class XMLworker():
-    def __init__(self,xml_file,dest,convert=True):
+class XMLworker(object):
+
+    def GetTranslator(self):
+        return wikitools.WikimediaTranslator(self.wikitype, self.infos['lang'])
+
+    def __init__(self, xml_file):
         self.languagedb="lib/wikimedia/languages.sqlite"
         self.xml_file=xml_file
-        self.dest=dest
-#        if isinstance(xml_file, file):
-#            self.infos=dest.get_metadata()
-#            self.wikitype=self.infos["type"]
-#        else:
         self.infos=self.get_infos()
         self.wikitype=self.guess_type()
+        self.zmq_channel = None
 
-        self.translator=wikitools.WikimediaTranslator(self.wikitype,self.infos['lang'])
-        self.is_allowed_title = self.translator.get_is_allowed_title_func()
-
-        self.convert=convert
-
-        self.set_infos()
+        self.is_allowed_title = self.GetTranslator().get_is_allowed_title_func()
 
         if not os.path.isfile(self.languagedb):
             print("%s doesn't exists. Please create it."%self.languagedb)
             sys.exit(1)
 
-    def set_convert(self,c=True):
-        self.convert=c
+    def GenerateMessage(self, title, body, msgtype):
+        self.zmq_channel.send_json({u'type': msgtype, u'title': title, u'body': body})
+
+    def GenerateRedirect(self, from_, to_):
+        self.GenerateMessage(from_, to_, 1)
+
+    def GenerateArticle(self, title, body):
+        self.GenerateMessage(title, body, 2)
+
+    def GenerateFinished(self):
+        self.GenerateMessage(u'', u'', 0)
 
     def str(self):
         print("Parsed %s:\n\ttype: %s\n"%(self.xml_file,self.infos['type']))
@@ -88,18 +93,16 @@ class XMLworker():
         pp.pprint(wiki_infos) 
         return wiki_infos 
 
-    def process_data(self):
+    def process_data(self, zmq_channel):
+        self.zmq_channel = zmq_channel
         contenttags = (u'text', u'title', u'id' )
-        wikiarticle={}
-        i=0
+        wikiarticle = {}
+        i = 0
         eta_every = 100
         st = datetime.datetime.now() 
 
-#        if not type(self.xml_file)==file:
         inputsize =  os.path.getsize(self.xml_file)
         stream = open(self.xml_file, 'rb')
-#        else:
-#        stream=self.xml_file
 
         for event, element in etree.iterparse(stream):
             tag = element.tag
@@ -109,12 +112,11 @@ class XMLworker():
             if tag in contenttags:
                 wikiarticle[tag] = element.text
             elif tag == u'redirect':
-                wikiarticle[u'redirect']=True
+                wikiarticle[u'redirect'] = element.get('title')
             elif tag == u'page': # end of article
-#                print wikiarticle['title']
                 redir = wikiarticle.get(u'redirect', None)
                 if redir:
-                    self.dest.insert_redirect(wikiarticle[u'title'],wikiarticle[u'redirect'])
+                    self.GenerateRedirect(wikiarticle[u'title'], redir)
                     wikiarticle={}
                 else:
                     if wikiarticle[u'text'] is None:
@@ -123,7 +125,10 @@ class XMLworker():
                     if colon>0:
                         if not self.is_allowed_title(wikiarticle[u'title'][0:colon]):
                             continue
-                    wikitools.WikiDocumentSQL(self.dest, wikiarticle[u'title'], wikiarticle[u'text'],self.translator,convert=self.convert)
+
+                    title = wikiarticle[u'title']
+                    body = wikiarticle[u'text']
+                    self.GenerateArticle(title, body)
                     wikiarticle={}
                     i+=1
                     if i%eta_every == 0:
@@ -134,20 +139,16 @@ class XMLworker():
                         sys.stdout.flush()
 
                 element.clear()
+        self.GenerateFinished()
 
-    def run(self):
+    def run(self, zmq_channel):
         try:
-            self.process_data()
+            self.process_data(zmq_channel)
         except etree.XMLSyntaxError as e:
-            print("Whoops, your xml file looks bogus:\n")
-            print(e.error_log)
-
-    def close(self):
-        self.dest.close()
-        pass
-
+            err_msg = u'Whoops, your xml file looks bogus:\n'
+            err_msg += e.error_log
+            raise Exception(err_msg)
 
     def set_infos(self):
-
         self.dest.set_metadata(self.infos)
 

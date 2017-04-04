@@ -26,31 +26,26 @@ class WikimediaTranslator():
                 return
         self.save =  lambda x: x
 
-
-
     def get_is_allowed_title_func(self):
-        if self.wiki=='wikipedia':
-            if self.lang=="fr":
+        if self.wiki == u'wikipedia':
+            if self.lang == u'fr':
                 return wikifr.is_allowed_title
 
         return wikien.is_allowed_title
 
-def WikiDocumentSQL(out, title, text, translator, convert=True):
+def WikiConvertToHTML(title, text, translator):
     buff=""
-    if convert:
-        if translator == None:
-            print("You asked for conversion, and gave me no translator, wtf is wrong with you")
-            sys.exit
-        text = clean(text,translator)
-        for line in compact(text):
-            buff += line#.encode('utf-8')
-        buff = toomanybr.sub(r'<br/><br/>',buff) 
-        buff=buff.replace(u'<math>',u'\(')
-        buff=buff.replace(u'</math>',u'\)')
-    else:
-        buff=text.encode('utf-8')
+    if translator == None:
+        print("You asked for conversion, and gave me no translator, wtf is wrong with you")
+        sys.exit
+    text = clean(text,translator)
+    for line in compact(text):
+        buff += line#.encode('utf-8')
+    buff = toomanybr.sub(r'<br/><br/>',buff) 
+    buff=buff.replace(u'<math>',u'\(')
+    buff=buff.replace(u'</math>',u'\)')
 
-    out.write(title, buff)
+    return (title, buff)
 
 ##
 # Removes HTML or XML character references and entities from a text string.

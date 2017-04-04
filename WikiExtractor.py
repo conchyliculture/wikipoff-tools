@@ -1,203 +1,140 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-#
-# =============================================================================
-#  Version: Lorraine (21 Jan 2014
-#   Heavily Hacked by renzo for the need of https://github.com/conchyliculture/wikipoff
-#
-#  Version: 2.6 (Oct 14, 2013)
-#  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
-#	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
-#
-#  Contributors:
-#	Leonardo Souza (lsouza@amtera.com.br)
-#	Juan Manuel Caicedo (juan@cavorite.com)
-#	Humberto Pereira (begini@gmail.com)
-#	Siegfried-A. Gevatter (siegfried@gevatter.com)
-#	Pedro Assis (pedroh2306@gmail.com)
-#
-# =============================================================================
-#  Copyright (c) 2009. Giuseppe Attardi (attardi@di.unipi.it).
-# =============================================================================
-#  This file is part of Tanl.
-#
-#  Tanl is free software; you can redistribute it and/or modify it
-#  under the terms of the GNU General Public License, version 3,
-#  as published by the Free Software Foundation.
-#
-#  Tanl is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# =============================================================================
-
 import sys
-sys.path.append("./lib")
-sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
+#sys.path.append("./lib")
+#sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
+import base64
 import getopt
-import struct
 from io import StringIO
 import os.path
-import sqlite3
 import pylzma
-from time import strftime
+#import sqlite3
+import struct
 from time import sleep
-from threading import Thread
-from wikimedia import XMLworker
-#=========================================================================
-#
-# MediaWiki Markup Grammar
- 
-# Template = "{{" [ "msg:" | "msgnw:" ] PageName { "|" [ ParameterName "=" AnyText | AnyText ] } "}}" ;
-# Extension = "<" ? extension ? ">" AnyText "</" ? extension ? ">" ;
-# NoWiki = "<nowiki />" | "<nowiki>" ( InlineText | BlockText ) "</nowiki>" ;
-# Parameter = "{{{" ParameterName { Parameter } [ "|" { AnyText | Parameter } ] "}}}" ;
-# Comment = "<!--" InlineText "-->" | "<!--" BlockText "//-->" ;
-#
-# ParameterName = ? uppercase, lowercase, numbers, no spaces, some special chars ? ;
-#
-#=========================================================================== 
+#from threading import Thread
+#from wikimedia import XMLworker
 
-# Program version
-version = '2.5'
-dbversion = "0.0.0.1"
+import zmq
+from multiprocessing import Process
 
-##### Main function ###########################################################
-
-inputsize = 0
-
-class OutputSqlite:
-
-    REQUIRED_INFO_TAGS=['lang-code','lang-local','lang-english',
-                        'type', 'source','author'
-            ]
-
-    def __init__(self, sqlite_file,max_page_count=None):
-        global dbversion
-        self.sqlite_file=sqlite_file
-        self.conn = sqlite3.connect(sqlite_file)
-#        sqlite3.enable_callback_tracebacks(True)
-#        self.conn.set_trace_callback(print)
-        self.conn.isolation_level="EXCLUSIVE"
-        self.curs = self.conn.cursor()
-        self.curs.execute("PRAGMA synchronous=NORMAL")
-        self.curs.execute("PRAGMA journal_mode=MEMORY")
-        if (max_page_count!=None):
-            self.set_max_page_count(max_page_count)
-
-        self.curs.execute('''CREATE TABLE IF NOT EXISTS articles (_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                                                                  title VARCHAR(255) NOT NULL,
-                                                                  text BLOB)''')
-        self.curs.execute('''CREATE TABLE IF NOT EXISTS redirects (
-                                                                  title_from VARCHAR(255) NOT NULL,
-                                                                  title_to VARCHAR(255))''')
-        self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
-        self.conn.commit()
-        self.curr_values=[]
-        self.max_inserts=1000
-        self.inserted_stats = 0
-        self.tick = Thread(target=self.count_inserts) 
-        self.tick.start()
-
-    def count_inserts(self):
-        sleep_time = 60
-        while True:
-            sleep(sleep_time)
-            print(u'inserted {0:d} articles in {1:d} sec'.format(self.inserted_stats, sleep_time))
-            self.inserted_stats = 0
-
-    def set_metadata(self,infos):
-        self.check_required_infos(infos)
-
-        self.set_lang(infos['lang-code'],infos['lang-local'],infos['lang-english'])
-        self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
-        self.set_version(version)
-        self.set_source(infos['source'])
-        self.set_author(infos['author'])
-        self.set_type(infos['type'])
+from lib.writer.sqlite import OutputSqlite 
+from lib.wikimedia.XMLworker import XMLworker
+from lib.wikimedia import wikitools
 
 
-    def check_required_infos(self,infos):
-        for key in self.REQUIRED_INFO_TAGS:
-            res = infos.get(key, None)
-            if not res:
-                print("We lack required infos : %s"%key)
-                sys.exit(1)
+# TODO argparse
+
+class Main(object):
+
+    def __init__(self, input_file, output_file):
+
+        self.halt = False
+
+        self.articles_parsed = 0
+
+        self.output = OutputSqlite(output_file)
+        self.xml_extractor = XMLworker(input_file)
+
+        self.context = zmq.Context()
 
 
-    def set_max_page_count(self,max_page_count):
-        self.curs.execute("PRAGMA max_page_count=%d"%max_page_count)
+	self.result_manager = Process(target=self.ResultManagerTask, args=())
+        sleep(1)
 
-    def insert_redirect(self,from_,to_):
-        self.curs.execute("INSERT INTO redirects VALUES (?,?)",(from_,to_))
+        self.worker_processes = []
+	for wrk_num in range(8):
+	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num,)))
+        sleep(1)
 
-    def set_lang(self,lang_code,lang_local,lang_english):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-code',?)",(lang_code,))
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang_local,))
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(lang_english,))
+	self.ventilator = Process(target=self.ExtractArticlesTask, args=())
+        sleep(1)
 
-    def set_langlocal(self,lang):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang,))
+    def ExtractArticlesTask(self):
+        # Set up a channel to send work
+        ventilator_send = self.context.socket(zmq.PUSH)
+        ventilator_send.bind("tcp://127.0.0.1:5557")
 
-    def set_langenglish(self,lang):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(lang,))
+        # Give everything a second to spin up and connect
+        sleep(1)
 
-    def set_gen_date(self,sdate):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('date',?)",(sdate,))
+        self.xml_extractor.run(ventilator_send)
+        print("ExtractArticlesTask finished")
 
-    def set_version(self,version):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('version',?)",(version,))
+    def ResultManagerTask(self):
+        # Set up a channel to receive results
+        results_receiver = self.context.socket(zmq.PULL)
+        results_receiver.bind("tcp://127.0.0.1:5558")
+    
+        # Set up a channel to send control commands
+        control_sender = self.context.socket(zmq.PUB)
+        control_sender.bind("tcp://127.0.0.1:5559")
 
-    def set_type(self,stype):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('type',?)",(stype,))
+        while(True):
+            message_json = results_receiver.recv_json()
+            title = message_json[u'title']
+            body = message_json[u'body']
+            if message_json[u'type'] == 1:
+                self.output.AddRedirect(title, body)
+            elif message_json[u'type'] == 3:
+                self.output.AddArticle(title, base64.b64decode(body))
+            elif message_json[u'type'] == 0:
+                break
+            else:
+                raise Exception('wrong type : %d'%message_json[u'type'])
 
-    def set_author(self,stype):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('author',?)",(stype,))
+        print(u'Setting Metadata')
+        self.output.set_metadata(self.xml_extractor.get_infos())
+        print(u'Building Indexes')
+        self.output.Close()
+        control_sender.send_string(u'finished')
+        self.halt = True
+        print(u'Result Manager has finished')
 
-    def set_source(self,stype):
-        self.curs.execute("INSERT OR REPLACE INTO metadata VALUES ('source',?)",(stype,))
+    def WorkerTask(self, wrk_num):
+        work_receiver = self.context.socket(zmq.PULL)
+        work_receiver.connect("tcp://127.0.0.1:5557")
 
-    def reserve(self,size):
-        pass
+        control_receiver = self.context.socket(zmq.SUB)
+        control_receiver.connect("tcp://127.0.0.1:5559")
+        control_receiver.setsockopt_string(zmq.SUBSCRIBE, u'')
+    
+        # Set up a channel to send result of work to the results reporter
+        results_sender = self.context.socket(zmq.PUSH)
+        results_sender.connect("tcp://127.0.0.1:5558")
+    
+        # Set up a poller to multiplex the work receiver and control receiver channels
+        poller = zmq.Poller()
+        poller.register(work_receiver, zmq.POLLIN)
+        poller.register(control_receiver, zmq.POLLIN)
 
-    def compress(self, text):
-        c=pylzma.compressfile(StringIO(text),dictionary=23)
-        result=c.read(5)
-        result+=struct.pack('<Q', len(text))
-        return bytes(result+c.read())
+        # Loop and accept messages from both channels, acting accordingly
+        while not self.halt:
+            socks = dict(poller.poll())
+            if socks.get(work_receiver) == zmq.POLLIN:
+                message_json = work_receiver.recv_json()
+                if message_json[u'type'] == 2:
+                    title, body = wikitools.WikiConvertToHTML(
+                            message_json[u'title'], message_json[u'body'], self.xml_extractor.GetTranslator())
+                    c = pylzma.compressfile(StringIO(body),dictionary=23)
+                    result = c.read(5)
+                    result+=struct.pack('<Q', len(body))
+                    body = result+c.read()
+                    message_json[u'type'] = 3
+                    message_json[u'body'] = base64.b64encode(body)
+                        
+                results_sender.send_json(message_json)
+            elif socks.get(control_receiver) == zmq.POLLIN:
+                ctrl_message = control_receiver.recv()
+                if ctrl_message == u'finished':
+                    break
+        print(u'Worker-%d has finishaide'%wrk_num)
 
-    def write(self,title,text,raw=False):
-        if (len(self.curr_values)==self.max_inserts):
-            self.curs.executemany("INSERT INTO articles VALUES (NULL,?,?)",self.curr_values)
-#            self.conn.commit()
-            self.curr_values=[]
-        if raw:
-            self.curr_values.append((title,text))
-        else:
-            self.curr_values.append((title, self.compress(text)))
-        self.inserted_stats += 1
-            
-    def close(self):
-        if (len(self.curr_values)>0):
-            self.curs.executemany("INSERT INTO articles VALUES (NULL,?,?)",self.curr_values)
-        self.conn.commit()
-        print("Building indexes")
-        self.curs.execute("CREATE INDEX tidx1 ON articles(title)")
-        self.curs.execute("CREATE INDEX tidx2 ON redirects(title_from)")
-        self.curs.execute("CREATE VIRTUAL TABLE searchTitles USING fts3(_id, title);")
-        print("Building FTS table")
-        self.curs.execute("INSERT INTO searchTitles(_id,title) SELECT _id,title FROM articles;")
-        self.conn.commit()
-        print("Cleaning up")
-        self.curs.execute("VACUUM")
-        self.curs.close()
-        self.conn.close()
+    def run(self):
+	for worker in self.worker_processes:
+            worker.start()
 
+	self.result_manager.start()
 
-
+	self.ventilator.start()
 
 def show_usage():
     print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml
@@ -210,8 +147,9 @@ Options:
         -t, --type      Wikimedia type (default: 'wikipedia')
 """)
 
+
 def main():
-    global prefix,inputsize
+
     script_name = os.path.basename(sys.argv[0])
 
     try:
@@ -221,7 +159,6 @@ def main():
         show_usage()
         sys.exit(1)
 
-    compress = False
     output_file=""
 
     for opt, arg in opts:
@@ -245,14 +182,12 @@ def main():
         print("%s already exists. Won't overwrite it."%output_file)
         sys.exit(1)
 
-    dest = OutputSqlite(output_file)
 
-    worker = XMLworker.XMLworker(input_file, dest)  
+    m = Main(input_file, output_file)
+    m.run()
+
 
     print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
-
-    worker.run()
-    worker.close()
 
 if __name__ == '__main__':
     main()
