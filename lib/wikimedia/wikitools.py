@@ -4,7 +4,10 @@ import re
 import sys
 from lang import *
 import wikiglobals
-from htmlentitydefs import name2codepoint
+try:
+    from htmlentitydefs import name2codepoint
+except :
+    from html.entities import name2codepoint 
 
 
 toomanybr=re.compile(r'<br/>(<br/>(?:<br/>)+)')
@@ -32,18 +35,18 @@ class WikimediaTranslator():
 
         return wikien.is_allowed_title
 
-def WikiDocumentSQL(out, title, text,translator,convert=True):
+def WikiDocumentSQL(out, title, text, translator, convert=True):
     buff=""
     if convert:
         if translator == None:
-            print "You asked for conversion, and gave me no translator, wtf is wrong with you"
+            print("You asked for conversion, and gave me no translator, wtf is wrong with you")
             sys.exit
         text = clean(text,translator)
         for line in compact(text):
-            buff += line.encode('utf-8')
+            buff += line#.encode('utf-8')
         buff = toomanybr.sub(r'<br/><br/>',buff) 
-        buff=buff.replace("<math>","\\(")
-        buff=buff.replace("</math>","\\)")
+        buff=buff.replace(u'<math>',u'\(')
+        buff=buff.replace(u'</math>',u'\)')
     else:
         buff=text.encode('utf-8')
 
@@ -315,7 +318,7 @@ def compact(text):
     emptySection = False        # empty sections are discarded
     inList = 0              # whether opened <UL>
 
-    for line in text.split('\n'):
+    for line in text.split(u'\n'):
 
         if not line:
             if inList>0:
@@ -335,9 +338,10 @@ def compact(text):
                     title += '.'
             headers[lev] = title
             # drop previous headers
-            for i in headers.keys():
-                if i > lev:
-                    del headers[i]
+#            for i, _ in headers.items():
+#                if i > lev:
+#                    del headers[i]V
+            headers = { k:v for k,v in headers.items() if k<= lev}
             emptySection = True
             continue
         # Handle page title
@@ -369,8 +373,9 @@ def compact(text):
         elif (line[0] == '(' and line[-1] == ')') or line.strip('.-') == '':
             continue
         elif len(headers):
-            items = headers.items()
-            items.sort()
+#            items = headers.items()
+#            items.sort()
+            sorted(headers)
 #            for (i, v) in items:
 #                page.append(v)
             headers.clear()

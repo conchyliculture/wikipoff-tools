@@ -34,25 +34,25 @@ class SaveFRTemplates:
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
         # TODO
-        self.fr_saveNobrTemplatesRE=re.compile(ur'{{nobr\|((?:[^{]+)|(?:[^{]*{{[^}]+}}[^}]*))}}',re.IGNORECASE|re.UNICODE)
-        self.fr_saveHeureTemplatesRE=re.compile(ur'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveDateTemplatesRE=re.compile(ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveNobrTemplatesRE=re.compile(r'{{nobr\|((?:[^{]+)|(?:[^{]*{{[^}]+}}[^}]*))}}',re.IGNORECASE|re.UNICODE)
+        self.fr_saveHeureTemplatesRE=re.compile(r'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveDateTemplatesRE=re.compile(r'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateShortTemplatesRE=re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveLangTemplatesRE=re.compile(r'{{(lang(?:ue)?(?:-\w+)?(?:\|[^}\|]+)+)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveUnitsTemplatesRE=re.compile(ur'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveTemperatureTemplatesRE=re.compile(ur'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveRefIncTemplatesRE=re.compile(ur'{{Référence [^|}]+\|([^|]+)}}',re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
-        self.fr_saveNumeroTemplatesRE=re.compile(ur'{{(numéro|n°|nº)}}',re.IGNORECASE)
-        self.fr_saveCitationTemplatesRE=re.compile(ur'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}',re.IGNORECASE)
-        self.fr_savePassageEvasifTemplatesRE=re.compile(ur'{{passage évasif\|([^}]+)}}',re.IGNORECASE)
+        self.fr_saveUnitsTemplatesRE=re.compile(r'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveTemperatureTemplatesRE=re.compile(r'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveRefIncTemplatesRE=re.compile(r'{{Référence [^|}]+\|([^|]+)}}',re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
+        self.fr_saveNumeroTemplatesRE=re.compile(r'{{(numéro|n°|nº)}}',re.IGNORECASE)
+        self.fr_saveCitationTemplatesRE=re.compile(r'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}',re.IGNORECASE)
+        self.fr_savePassageEvasifTemplatesRE=re.compile(r'{{passage évasif\|([^}]+)}}',re.IGNORECASE)
 # not in my wikipedia
-#self.fr_savePassNonNeutreTemplatesRE=re.compile(ur'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+#self.fr_savePassNonNeutreTemplatesRE=re.compile(r'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_saveDouteuxTemplatesRE=re.compile(r'{{douteux\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_savePasspromotionnelTemplatesRE=re.compile(r'{{(?:passage promotionnel|pub !|promo !)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePassIneditTemplatesRE=re.compile(ur'{{passage inédit\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePassIneditTemplatesRE=re.compile(r'{{passage inédit\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_savePasClairTemplatesRE=re.compile(r'{{pas clair\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveWTFTemplatesRE=re.compile(ur'{{incomprénsible\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePrecNecTemplatesRE=re.compile(ur'{{Précision nécessaire\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveWTFTemplatesRE=re.compile(r'{{incomprénsible\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePrecNecTemplatesRE=re.compile(r'{{Précision nécessaire\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_saveQuoiTemplatesRE=re.compile(r'{{Quoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_savePourquoiTemplatesRE=re.compile(r'{{Pourquoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_saveCommentTemplatesRE=re.compile(r'{{Comment\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
@@ -66,19 +66,19 @@ class SaveFRTemplates:
         self.fr_saveCouleursTemplatesRE=re.compile(r'{{(rouge|bleu|vert|jaune|orange|gris|marron|rose)\|([^\|}]+)}}', re.IGNORECASE)
         self.fr_saveCodeTemplatesRE=re.compile(r'{{code\|([^\|}]+)}}', re.IGNORECASE)
         self.fr_saveJaponaisTemplatesRE=re.compile(r'{{japonais\|([^\|]+)\|([^}]+)}}', re.IGNORECASE)
-        self.fr_saveSimpleSieclesTempaltesRE=re.compile(ur'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
-        self.fr_saveSieclesTempaltesRE=re.compile(ur'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
-        self.fr_saveSieclesGTempaltesRE=re.compile(ur'{{(-?sp-?(\|[^|}]+\|er?\|[^|}]+\|[^|}]+\|er?\|?s?))}}', re.IGNORECASE)
-        self.fr_saveNapoleonTemplatesRE=re.compile(ur'{{(Napoléon I)er}}', re.IGNORECASE)
+        self.fr_saveSimpleSieclesTempaltesRE=re.compile(r'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
+        self.fr_saveSieclesTempaltesRE=re.compile(r'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
+        self.fr_saveSieclesGTempaltesRE=re.compile(r'{{(-?sp-?(\|[^|}]+\|er?\|[^|}]+\|[^|}]+\|er?\|?s?))}}', re.IGNORECASE)
+        self.fr_saveNapoleonTemplatesRE=re.compile(r'{{(Napoléon I)er}}', re.IGNORECASE)
 
         self.aRE=re.compile(r'<math>')
         self.bRE=re.compile(r'</math>')
-	self.locale_set=False
+        self.locale_set=False
 
     def save(self,t):
-	if self.locale_set==False:
-		locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
-		self.locale_set = True
+        if self.locale_set==False:
+                locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
+                self.locale_set = True
         text=t
         text=self.fr_saveHeureTemplates(text)
         text=self.fr_saveNobrTemplates(text)
@@ -128,11 +128,11 @@ class SaveFRTemplates:
         return "<span class=\"nowrap\">%s</span>"%pute
 
     def fr_saveNobrTemplates(self,text):
-        #return self.fr_saveNobrTemplatesRE.sub(ur'\1',text)
-        #return self.fr_saveNobrTemplatesRE.sub(ur'<span class="nowrap">\1</span>',text)
+        #return self.fr_saveNobrTemplatesRE.sub(r'\1',text)
+        #return self.fr_saveNobrTemplatesRE.sub(r'<span class="nowrap">\1</span>',text)
         return re.sub(self.fr_saveNobrTemplatesRE,self.replnobr,text)
     def fr_saveNapoleonTemplates(self,text):
-        return self.fr_saveNapoleonTemplatesRE.sub(ur'Napoléon I<sup>er</sup>',text)
+        return self.fr_saveNapoleonTemplatesRE.sub(r'Napoléon I<sup>er</sup>',text)
     def fr_saveDouteuxTemplates(self,text):
         return self.fr_saveDouteuxTemplatesRE.sub(r'\1<sup>[douteux]</sup>',text)
     def fr_savePasspromotionnelTemplates(self,text):
@@ -210,10 +210,10 @@ class SaveFRTemplates:
         return re.sub(self.fr_saveSieclesGTempaltesRE,self.replgsiecles,text)
 
     def fr_saveSimpleSieclesTemplates(self,text):
-        return self.fr_saveSimpleSieclesTempaltesRE.sub(ur'\1',text,re.LOCALE)
+        return self.fr_saveSimpleSieclesTempaltesRE.sub(r'\1',text,re.LOCALE)
 
     def fr_saveCitationTemplate(self,text):
-        return self.fr_saveCitationTemplatesRE.sub(ur'«&#160;<i>\1</i>&#160;»',text)
+        return self.fr_saveCitationTemplatesRE.sub(r'«&#160;<i>\1</i>&#160;»',text)
 
     def fr_savePassageEvasifTemplates(self,text):
         return self.fr_savePassageEvasifTemplatesRE.sub(r'<u>\1</u><sup>[evasif??]</sup>',text)
@@ -222,7 +222,7 @@ class SaveFRTemplates:
         return self.fr_saveNumeroTemplatesRE.sub(u"n°",text)
 
     def fr_saveRefIncTemplates(self,text):
-        return self.fr_saveRefIncTemplatesRE.sub(ur'<u>\1</u><sup>[ref incomplète??]</sup>',text)
+        return self.fr_saveRefIncTemplatesRE.sub(r'<u>\1</u><sup>[ref incomplète??]</sup>',text)
 
     def repldate(self,m):
         res=""
@@ -287,7 +287,7 @@ class SaveFRTemplates:
         return self.fr_saveCodeTemplatesRE.sub(r'<span style=\"font-family:monospace,Courier\">\1</span>',text)
 
     def fr_saveTemperatureTemplates(self,text):
-        return self.fr_saveTemperatureTemplatesRE.sub(ur'\1°C',text)
+        return self.fr_saveTemperatureTemplatesRE.sub(r'\1°C',text)
 
     def repljaponais(self,m):
         return m.group(1)+" ("+m.group(2).replace("|",", ").replace("extra=","")+")"
@@ -377,7 +377,7 @@ class SaveFRTemplates:
                 res+=tab[0]
             else:
                 res+= u"⋅".join(tab)
-                res=re.sub(ur'×10<sup>([^<]+)</sup>⋅', ur'×10<sup>\1</sup> ',res)
+                res=re.sub(r'×10<sup>([^<]+)</sup>⋅', r'×10<sup>\1</sup> ',res)
             return res 
 
     def fr_saveUnitsTemplates(self,text):

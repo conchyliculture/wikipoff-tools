@@ -3,3 +3,4 @@ wget -nc https://pypi.python.org/packages/fe/33/9fa773d6f2f11d95f24e590190220e23
 tar xvf pylzma-0.4.8.tar.gz
 cd pylzma-0.4.8
 /usr/bin/python setup.py install --root=../lib/ --prefix=../
+/usr/bin/python3 setup.py install --root=../lib/ --prefix=../

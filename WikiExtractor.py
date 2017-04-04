@@ -36,14 +36,16 @@
 
 import sys
 sys.path.append("./lib")
-sys.path.append("./lib/python2.7/site-packages/")
+sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
 import getopt
 import struct
-from cStringIO import StringIO
+from io import StringIO
 import os.path
 import sqlite3
 import pylzma
 from time import strftime
+from time import sleep
+from threading import Thread
 from wikimedia import XMLworker
 #=========================================================================
 #
@@ -77,7 +79,8 @@ class OutputSqlite:
         global dbversion
         self.sqlite_file=sqlite_file
         self.conn = sqlite3.connect(sqlite_file)
-        sqlite3.enable_callback_tracebacks(True)
+#        sqlite3.enable_callback_tracebacks(True)
+#        self.conn.set_trace_callback(print)
         self.conn.isolation_level="EXCLUSIVE"
         self.curs = self.conn.cursor()
         self.curs.execute("PRAGMA synchronous=NORMAL")
@@ -94,7 +97,17 @@ class OutputSqlite:
         self.curs.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
         self.conn.commit()
         self.curr_values=[]
-        self.max_inserts=100
+        self.max_inserts=1000
+        self.inserted_stats = 0
+        self.tick = Thread(target=self.count_inserts) 
+        self.tick.start()
+
+    def count_inserts(self):
+        sleep_time = 60
+        while True:
+            sleep(sleep_time)
+            print(u'inserted {0:d} articles in {1:d} sec'.format(self.inserted_stats, sleep_time))
+            self.inserted_stats = 0
 
     def set_metadata(self,infos):
         self.check_required_infos(infos)
@@ -109,13 +122,15 @@ class OutputSqlite:
 
     def check_required_infos(self,infos):
         for key in self.REQUIRED_INFO_TAGS:
-            if (not infos.has_key(key)):
-                print "We lack required infos : %s"%key
+            res = infos.get(key, None)
+            if not res:
+                print("We lack required infos : %s"%key)
                 sys.exit(1)
 
 
     def set_max_page_count(self,max_page_count):
         self.curs.execute("PRAGMA max_page_count=%d"%max_page_count)
+
     def insert_redirect(self,from_,to_):
         self.curs.execute("INSERT INTO redirects VALUES (?,?)",(from_,to_))
 
@@ -148,18 +163,22 @@ class OutputSqlite:
     def reserve(self,size):
         pass
 
+    def compress(self, text):
+        c=pylzma.compressfile(StringIO(text),dictionary=23)
+        result=c.read(5)
+        result+=struct.pack('<Q', len(text))
+        return bytes(result+c.read())
+
     def write(self,title,text,raw=False):
         if (len(self.curr_values)==self.max_inserts):
             self.curs.executemany("INSERT INTO articles VALUES (NULL,?,?)",self.curr_values)
-            self.conn.commit()
+#            self.conn.commit()
             self.curr_values=[]
         if raw:
             self.curr_values.append((title,text))
         else:
-            c=pylzma.compressfile(StringIO(text),dictionary=23)
-            result=c.read(5)
-            result+=struct.pack('<Q', len(text))
-            self.curr_values.append((title,buffer(result+c.read())))
+            self.curr_values.append((title, self.compress(text)))
+        self.inserted_stats += 1
             
     def close(self):
         if (len(self.curr_values)>0):
@@ -181,15 +200,15 @@ class OutputSqlite:
 
 
 def show_usage():
-    print """Usage: python WikiExtractor.py  [options] -x wikipedia.xml
+    print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml
 Converts a wikipedia XML dump file into sqlite databases to be used in WikipOff
 
 Options:
         -x, --xml       Input xml dump
         -d, --db        Output database file (default : 'wiki.sqlite') 
-        -h, --help      Print this help
+/bin/bash: q : commande introuvable
         -t, --type      Wikimedia type (default: 'wikipedia')
-"""
+""")
 
 def main():
     global prefix,inputsize
@@ -219,7 +238,7 @@ def main():
         sys.exit()
 
     if output_file is None or output_file=="":
-        print "I need a filename for the destination sqlite file"
+        print("I need a filename for the destination sqlite file")
         sys.exit(1)
 
     if os.path.isfile(output_file):
@@ -228,7 +247,7 @@ def main():
 
     dest = OutputSqlite(output_file)
 
-    worker = XMLworker.XMLworker(input_file,dest)  
+    worker = XMLworker.XMLworker(input_file, dest)  
 
     print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
 
