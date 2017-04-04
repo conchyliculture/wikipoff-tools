@@ -10,6 +10,7 @@ from lxml import etree
 import wikitools
 import datetime
 import getpass
+
 class XMLworker():
     def __init__(self,xml_file,dest,convert=True):
         self.languagedb="lib/wikimedia/languages.sqlite"

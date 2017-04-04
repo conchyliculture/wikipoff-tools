@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
-import sys
+import getopt
+import lxml
 import os
 import readline
-import lxml
-import getopt
+import subprocess
+import sys
 
 def download_file(url,dest=None):
     import urllib2
@@ -54,19 +55,17 @@ def prepare_env():
             os.environ['PYTHONPATH']=os.path.join(eggdir,"..")
 
         print("Downloading required libs")
-        download_file("https://pypi.python.org/packages/source/p/pylzma/pylzma-0.4.4.tar.gz#md5=a2be89cb2288174ebb18bec68fa559fb","pylzma-0.4.4.tar.gz")
-        os.system("tar xzf pylzma-0.4.4.tar.gz")
+        download_file("https://pypi.python.org/packages/fe/33/9fa773d6f2f11d95f24e590190220e23badfea3725ed71d78908fbfd4a14/pylzma-0.4.8.tar.gz#md5=7040c489c7bbd0e1a4331484e1579261","pylzma-0.4.8.tar.gz")
+        subprocess.check_call(["/bin/tar", "xzf", "pylzma-0.4.8.tar.gz"])
         curdir=os.getcwd()
-        os.chdir("pylzma-0.4.4")
+        res = os.chdir("pylzma-0.4.8")
         download_file("http://pypi.python.org/packages/2.7/s/setuptools/setuptools-0.6c11-py2.7.egg")
-        os.system("python setup.py install --prefix=\"%s/../\""%os.getcwd())
+        res = subprocess.check_call(["/usr/bin/python", "setup.py", "install", "--root=../lib/", "--prefix=../"])
         os.chdir(curdir)
-        os.system("rm -rf ./bin")
+        subprocess.check_call(["/bin/rm", "-rf", "./bin"])
         print("done")
         print("you can rm -rf pylzma-0.4.4*") 
         
-
-
 
 def ask_method():
     while True:
@@ -148,7 +147,8 @@ def main():
         if opt in ('-o', '--output'):
             o = arg
 
-    prepare_env()
+    
+    subprocess.check_call(["/bin/bash", "make_pylzma.sh"])
 
     if method==0:
         method = ask_method()

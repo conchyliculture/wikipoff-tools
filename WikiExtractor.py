@@ -36,15 +36,11 @@
 
 import sys
 sys.path.append("./lib")
-sys.path.append("./lib/python2.7/site-packages/pylzma-0.4.4-py2.7-linux-x86_64.egg/")
-import gc
+sys.path.append("./lib/python2.7/site-packages/")
 import getopt
-import urllib
 import struct
 from cStringIO import StringIO
-import bz2
 import os.path
-import base64
 import sqlite3
 import pylzma
 from time import strftime
@@ -81,6 +77,7 @@ class OutputSqlite:
         global dbversion
         self.sqlite_file=sqlite_file
         self.conn = sqlite3.connect(sqlite_file)
+        sqlite3.enable_callback_tracebacks(True)
         self.conn.isolation_level="EXCLUSIVE"
         self.curs = self.conn.cursor()
         self.curs.execute("PRAGMA synchronous=NORMAL")
