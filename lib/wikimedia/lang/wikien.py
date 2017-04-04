@@ -19,9 +19,8 @@
 #     You should have received a copy of the GNU General Public License
 #     along with WikipOff.  If not, see <http://www.gnu.org/licenses/>.
 
-import locale
-
 def is_allowed_title(title):
-    return title not in ["Blog","Category","Category talk","Discussion","File","File talk",
-                        "Forum","Forum talk","Help","Help talk","MediaWiki","MediaWiki talk",
-                        "Talk","Template","Template talk","User","User blog","User talk","User blog comment"]
+    return title not in [
+            u'Blog', u'Category', u'Category talk', u'Discussion', u'File', u'File talk',
+            'Forum', u'Forum talk', u'Help', u'Help talk', u'MediaWiki', u'MediaWiki talk',
+            'Talk', u'Template', u'Template talk', u'User', u'User blog', u'User talk', u'User blog comment']

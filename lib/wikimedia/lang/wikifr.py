@@ -1,21 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright 2014 "Renzokuken" (pseudonym, first committer of WikipOff project) at
 # https://github.com/conchyliculture/wikipoff
-# 
+#
 # This file is part of WikipOff.
-# 
+#
 #     WikipOff is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation, either version 3 of the License, or
 #     (at your option) any later version.
-# 
+#
 #     WikipOff is distributed in the hope that it will be useful,
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
-# 
+#
 #     You should have received a copy of the GNU General Public License
 #     along with WikipOff.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -27,86 +27,87 @@ import unittest
 import traceback
 
 def is_allowed_title(title):
-    return title not in [u"Modèle",u"Catégorie",u"Portail",u"Fichier",u"Wikipédia",u"Projet",u"Référence",u"MediaWiki",u"Aide",u"Module"]
+    return title not in [
+            u'Modèle', u'Catégorie', u'Portail', u'Fichier', u'Wikipédia',
+            u'Projet', u'Référence', u'MediaWiki', u'Aide', u'Module']
 
-class SaveFRTemplates:
+class SaveFRTemplates(object):
     def __init__(self):
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
         # TODO
-        self.fr_saveNobrTemplatesRE=re.compile(r'{{nobr\|((?:[^{]+)|(?:[^{]*{{[^}]+}}[^}]*))}}',re.IGNORECASE|re.UNICODE)
-        self.fr_saveHeureTemplatesRE=re.compile(r'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveDateTemplatesRE=re.compile(r'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveDateShortTemplatesRE=re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveLangTemplatesRE=re.compile(r'{{(lang(?:ue)?(?:-\w+)?(?:\|[^}\|]+)+)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveUnitsTemplatesRE=re.compile(r'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveTemperatureTemplatesRE=re.compile(r'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
-        self.fr_saveRefIncTemplatesRE=re.compile(r'{{Référence [^|}]+\|([^|]+)}}',re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
-        self.fr_saveNumeroTemplatesRE=re.compile(r'{{(numéro|n°|nº)}}',re.IGNORECASE)
-        self.fr_saveCitationTemplatesRE=re.compile(r'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}',re.IGNORECASE)
-        self.fr_savePassageEvasifTemplatesRE=re.compile(r'{{passage évasif\|([^}]+)}}',re.IGNORECASE)
+        self.fr_saveNobrTemplatesRE = re.compile(r'{{nobr\|((?:[^{]+)|(?:[^{]*{{[^}]+}}[^}]*))}}',re.IGNORECASE|re.UNICODE)
+        self.fr_saveHeureTemplatesRE = re.compile(r'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveDateTemplatesRE = re.compile(ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveDateShortTemplatesRE = re.compile(r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveLangTemplatesRE = re.compile(r'{{(lang(?:ue)?(?:-\w+)?(?:\|[^}\|]+)+)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveUnitsTemplatesRE = re.compile(r'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveTemperatureTemplatesRE = re.compile(ur'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
+        self.fr_saveRefIncTemplatesRE = re.compile(r'{{Référence [^|}]+\|([^|]+)}}',re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
+        self.fr_saveNumeroTemplatesRE = re.compile(ur'{{(numéro|n°|nº)}}',re.IGNORECASE)
+        self.fr_saveCitationTemplatesRE = re.compile(r'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}',re.IGNORECASE)
+        self.fr_savePassageEvasifTemplatesRE = re.compile(r'{{passage évasif\|([^}]+)}}',re.IGNORECASE)
 # not in my wikipedia
-#self.fr_savePassNonNeutreTemplatesRE=re.compile(r'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveDouteuxTemplatesRE=re.compile(r'{{douteux\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePasspromotionnelTemplatesRE=re.compile(r'{{(?:passage promotionnel|pub !|promo !)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePassIneditTemplatesRE=re.compile(r'{{passage inédit\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePasClairTemplatesRE=re.compile(r'{{pas clair\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveWTFTemplatesRE=re.compile(r'{{incomprénsible\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePrecNecTemplatesRE=re.compile(r'{{Précision nécessaire\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveQuoiTemplatesRE=re.compile(r'{{Quoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_savePourquoiTemplatesRE=re.compile(r'{{Pourquoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveCommentTemplatesRE=re.compile(r'{{Comment\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveWhereTemplatesRE=re.compile(r'{{Où\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveQuandTemplatesRE=re.compile(r'{{Quand\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveDepuisQuandTemplatesRE=re.compile(r'{{Depuis Quand\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveQuiQuoiTemplatesRE=re.compile(r'{{(?:Qui|Lequel|combien|enquoi|en quoi|lesquels|laquelle|lesquelles|par qui|parqui|pour qui)\|([^\|]+)}}', re.IGNORECASE)
-        self.fr_savestyleTemplatesRE=re.compile(r'{{style\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
-        self.fr_saveFormatnumTemplatesRE=re.compile(r'{{(?:formatnum):([0-9.,]+)}}', re.IGNORECASE)
-        self.fr_saveWeirdNumbersTemplatesRE=re.compile(r'{{((?:(exp|ind)\|[^}]+)|\d|e|1er|1re|2nd|2nde)}}', re.IGNORECASE)
-        self.fr_saveCouleursTemplatesRE=re.compile(r'{{(rouge|bleu|vert|jaune|orange|gris|marron|rose)\|([^\|}]+)}}', re.IGNORECASE)
-        self.fr_saveCodeTemplatesRE=re.compile(r'{{code\|([^\|}]+)}}', re.IGNORECASE)
-        self.fr_saveJaponaisTemplatesRE=re.compile(r'{{japonais\|([^\|]+)\|([^}]+)}}', re.IGNORECASE)
-        self.fr_saveSimpleSieclesTempaltesRE=re.compile(r'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
-        self.fr_saveSieclesTempaltesRE=re.compile(r'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
-        self.fr_saveSieclesGTempaltesRE=re.compile(r'{{(-?sp-?(\|[^|}]+\|er?\|[^|}]+\|[^|}]+\|er?\|?s?))}}', re.IGNORECASE)
-        self.fr_saveNapoleonTemplatesRE=re.compile(r'{{(Napoléon I)er}}', re.IGNORECASE)
+#self.fr_savePassNonNeutreTemplatesRE = re.compile(r'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveDouteuxTemplatesRE = re.compile(r'{{douteux\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePasspromotionnelTemplatesRE = re.compile(r'{{(?:passage promotionnel|pub !|promo !)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePassIneditTemplatesRE = re.compile(r'{{passage inédit\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePasClairTemplatesRE = re.compile(r'{{pas clair\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveWTFTemplatesRE = re.compile(r'{{incomprénsible\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePrecNecTemplatesRE = re.compile(r'{{Précision nécessaire\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveQuoiTemplatesRE = re.compile(r'{{Quoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_savePourquoiTemplatesRE = re.compile(r'{{Pourquoi\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveCommentTemplatesRE = re.compile(r'{{Comment\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveWhereTemplatesRE = re.compile(r'{{Où\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveQuandTemplatesRE = re.compile(r'{{Quand\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveDepuisQuandTemplatesRE = re.compile(r'{{Depuis Quand\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveQuiQuoiTemplatesRE = re.compile(r'{{(?:Qui|Lequel|combien|enquoi|en quoi|lesquels|laquelle|lesquelles|par qui|parqui|pour qui)\|([^\|]+)}}', re.IGNORECASE)
+        self.fr_savestyleTemplatesRE = re.compile(r'{{style\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        self.fr_saveFormatnumTemplatesRE = re.compile(r'{{(?:formatnum):([0-9.,]+)}}', re.IGNORECASE)
+        self.fr_saveWeirdNumbersTemplatesRE = re.compile(r'{{((?:(exp|ind)\|[^}]+)|\d|e|1er|1re|2nd|2nde)}}', re.IGNORECASE)
+        self.fr_saveCouleursTemplatesRE = re.compile(r'{{(rouge|bleu|vert|jaune|orange|gris|marron|rose)\|([^\|}]+)}}', re.IGNORECASE)
+        self.fr_saveCodeTemplatesRE = re.compile(r'{{code\|([^\|}]+)}}', re.IGNORECASE)
+        self.fr_saveJaponaisTemplatesRE = re.compile(r'{{japonais\|([^\|]+)\|([^}]+)}}', re.IGNORECASE)
+        self.fr_saveSimpleSieclesTempaltesRE = re.compile(r'{{([^}]+ (?:si.cle|mill.naire)[^}]*)}}', re.IGNORECASE|re.LOCALE)
+        self.fr_saveSieclesTempaltesRE = re.compile(r'{{(?:([^|}]+(?:si.cle|mill.naire)[^|}]*)|(-?s2?-?(?:\|[^|}]+\|e)+))\|?}}', re.IGNORECASE)
+        self.fr_saveSieclesGTempaltesRE = re.compile(r'{{(-?sp-?(\|[^|}]+\|er?\|[^|}]+\|[^|}]+\|er?\|?s?))}}', re.IGNORECASE)
+        self.fr_saveNapoleonTemplatesRE = re.compile(r'{{(Napoléon I)er}}', re.IGNORECASE)
 
-        self.aRE=re.compile(r'<math>')
-        self.bRE=re.compile(r'</math>')
-        self.locale_set=False
+        self.aRE = re.compile(r'<math>')
+        self.bRE = re.compile(r'</math>')
+        self.locale_set = False
 
-    def save(self,t):
+    def save(self, t):
         if self.locale_set==False:
-                locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
-                self.locale_set = True
-        text=t
-        text=self.fr_saveHeureTemplates(text)
-        text=self.fr_saveNobrTemplates(text)
-        text=self.fr_saveTemperatureTemplates(text)
-        text=self.fr_saveFormatnumTemplates(text)
-        text=self.fr_saveUnitsTemplates(text)
-        text=self.fr_saveWeirdNumbersTemplates(text)
-        text=self.fr_saveNumeroTemplate(text)
-        text=self.fr_saveSieclesGTemplates(text)
-        text=self.fr_saveSieclesTemplates(text)
-        text=self.fr_saveLangTemplates(text)
-        text=self.fr_saveCouleursTemplates(text)
-        text=self.fr_saveRefIncTemplates(text)
-        text=self.fr_saveDateTemplates(text)
-        text=self.fr_saveQuiQuoiTemplates(text)
-        text=self.fr_saveCodeTemplates(text)
-        text=self.fr_saveCitationTemplate(text)
-        text=self.fr_saveNapoleonTemplates(text)
-        text=self.fr_saveDateShortTemplates(text)
-        text=self.fr_saveJaponaisTemplates(text)
-#        text=self.fr_savePasspromotionnelTemplates(text)
-#        text=self.fr_savePassIneditTemplates(text)
-#        text=self.fr_savePasClairTemplates(text)
-#        text=self.fr_saveWTFTemplates(text)
-#        text=self.fr_savePrecNecTemplates(text)
-#        text=self.fr_savestyleTemplates(text)
+            locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
+            self.locale_set = True
+        text = t
+        text = self.fr_saveHeureTemplates(text)
+        text = self.fr_saveNobrTemplates(text)
+        text = self.fr_saveTemperatureTemplates(text)
+        text = self.fr_saveFormatnumTemplates(text)
+        text = self.fr_saveUnitsTemplates(text)
+        text = self.fr_saveWeirdNumbersTemplates(text)
+        text = self.fr_saveNumeroTemplate(text)
+        text = self.fr_saveSieclesGTemplates(text)
+        text = self.fr_saveSieclesTemplates(text)
+        text = self.fr_saveLangTemplates(text)
+        text = self.fr_saveCouleursTemplates(text)
+        text = self.fr_saveRefIncTemplates(text)
+        text = self.fr_saveDateTemplates(text)
+        text = self.fr_saveQuiQuoiTemplates(text)
+        text = self.fr_saveCodeTemplates(text)
+        text = self.fr_saveCitationTemplate(text)
+        text = self.fr_saveNapoleonTemplates(text)
+        text = self.fr_saveDateShortTemplates(text)
+        text = self.fr_saveJaponaisTemplates(text)
+#        text = self.fr_savePasspromotionnelTemplates(text)
+#        text = self.fr_savePassIneditTemplates(text)
+#        text = self.fr_savePasClairTemplates(text)
+#        text = self.fr_saveWTFTemplates(text)
+#        text = self.fr_savePrecNecTemplates(text)
+#        text = self.fr_savestyleTemplates(text)
         return text
-
 
     def replheures(self,m):
         res=""
@@ -150,7 +151,7 @@ class SaveFRTemplates:
     def fr_savestyleTemplates(self,text):
         return self.fr_savestyleTemplatesRE.sub(r'\1',text)
 
-    
+
     def replsiecles(self,m):
         nb=m.group(2)
         if nb:
@@ -251,7 +252,7 @@ class SaveFRTemplates:
             reste=lol[2:]
             if len(reste)==1:
                 return reste[0].replace("texte=",'')
-            else: 
+            else:
                 for p in reste:
                     coin=re.match(r'texte=(.*)',p,re.IGNORECASE)
                     if coin:
@@ -259,7 +260,7 @@ class SaveFRTemplates:
 
 
     def fr_saveLangTemplates(self,text):
-        return re.sub(self.fr_saveLangTemplatesRE,self.repllang,text) 
+        return re.sub(self.fr_saveLangTemplatesRE,self.repllang,text)
 
     def replcolors(self,m):
         col=m.group(1)
@@ -287,7 +288,7 @@ class SaveFRTemplates:
         return self.fr_saveCodeTemplatesRE.sub(r'<span style=\"font-family:monospace,Courier\">\1</span>',text)
 
     def fr_saveTemperatureTemplates(self,text):
-        return self.fr_saveTemperatureTemplatesRE.sub(r'\1°C',text)
+        return self.fr_saveTemperatureTemplatesRE.sub(ur'\1°C',text)
 
     def repljaponais(self,m):
         return m.group(1)+" ("+m.group(2).replace("|",", ").replace("extra=","")+")"
@@ -322,7 +323,7 @@ class SaveFRTemplates:
 
     def fr_saveWeirdNumbersTemplates(self,text):
         return re.sub(self.fr_saveWeirdNumbersTemplatesRE,self.replweirdnum,text)
-    
+
     def replformat(self,m):
         nb=m.group(1)
         try:
@@ -338,220 +339,48 @@ class SaveFRTemplates:
     def fr_saveFormatnumTemplates(self,text):
         return re.sub(self.fr_saveFormatnumTemplatesRE,self.replformat,text)
 
-    def num_to_loc(self,num):
+    def num_to_loc(self, num):
         try:
-            virg=num.replace(" ","").replace(",",".").split(r".")
-            res=locale.format("%d",int(virg[0]),grouping=True)
-            if len(virg)>1:
-                res+="."+virg[1]
+            virg=num.replace(u' ', u'').replace(u',', u'.').split(r'.')
+            res=locale.format(u'%d', int(virg[0]), grouping=True)
+            if len(virg) > 1:
+                res += u'.' + virg[1]
             return res
         except ValueError as e:
             # Failing humbly...
             return num
 
     def replunit(self,m):
-        l=m.group(1).split("|")
-        if len(l)==1:
-            a=self.num_to_loc(l[0])
-            return "%s"%(a)
-        else: 
+        l = m.group(1).split('|')
+        if len(l) == 1:
+            a = self.num_to_loc(l[0])
+            return u'%s'%(a)
+        else:
             # It becomes clear in the test function testUnit below THAT THIS IS A FUCKING MESS
-            dot=""
-            exp=" "
-            tab=[]
+            dot = u''
+            exp = u' '
+            tab = []
             for s in l[1:]:
-                index=s.find("=")
-                if index>0:
-                    s=s[2:]
-                    exp=u"×10"
-                if (re.match(r'-?[0-9]',s)):
-                    tab.append(u"%s<sup>%s</sup>"%(dot,self.num_to_loc(s)))
-                elif s=="":
+                index =s.find(u'=')
+                if index > 0:
+                    s = s[2:]
+                    exp = u'×10'
+                if (re.match(r'-?[0-9]', s)):
+                    tab.append(u'%s<sup>%s</sup>'%(dot, self.num_to_loc(s)))
+                elif s == u'':
                     tab.append(dot)
                 else:
-                    dot=s
-            res=self.num_to_loc(l[0])+exp
-            if len(tab)==0:
-                res+=dot
-            elif len(tab)==1:
-                res+=tab[0]
+                    dot = s
+            res = self.num_to_loc(l[0]) + exp
+            if len(tab) == 0:
+                res += dot
+            elif len(tab) == 1:
+                res += tab[0]
             else:
-                res+= u"⋅".join(tab)
-                res=re.sub(r'×10<sup>([^<]+)</sup>⋅', r'×10<sup>\1</sup> ',res)
-            return res 
+                res += u'⋅'.join(tab)
+                res = re.sub(r'×10<sup>([^<]+)</sup>', r'×10<sup>\1</sup> ', res)
+            return res
 
     def fr_saveUnitsTemplates(self,text):
         return re.sub(self.fr_saveUnitsTemplatesRE,self.replunit,text)
-
-
-
-
-class WikiFRTests(unittest.TestCase):
-
-    sfrt=SaveFRTemplates()
-
-    def testLang(self):
-        tests=[
-            ["lolilol ''{{lang|la|domus Dei}}''","lolilol ''domus Dei''"],
-            ["''{{lang-en|Irish Republican Army}}, IRA'' ; ''{{lang-ga|Óglaigh na hÉireann}}'') est le nom porté","''Irish Republican Army, IRA'' ; ''Óglaigh na hÉireann'') est le nom porté"],
-            ["{{lang|ko|입니다.}}","입니다."],
-            ["Ainsi, le {{lang|en|''[[Quicksort]]''}} (ou tri rapide)","Ainsi, le ''[[Quicksort]]'' (ou tri rapide)"],
-            [" ''{{lang|hy|Hayastan}}'', {{lang|hy|Հայաստան}} et ''{{lang|hy|Hayastani Hanrapetut’yun}}'', {{lang|hy|Հայաստանի Հանրապետություն}}"," ''Hayastan'', Հայաստան et ''Hayastani Hanrapetut’yun'', Հայաստանի Հանրապետություն"],
-            ["{{langue|ja|酸度}} || １.４（{{langue|ja|芳醇}}","酸度 || １.４（芳醇"],
-            ["{{langue|thaï|กรุงเทพฯ}}","กรุงเทพฯ"],
-            ["{{Lang|ar|texte=''Jabal ad Dukhan''}}","''Jabal ad Dukhan''"],
-            ["{{lang|arc-Hebr|dir=rtl|texte=ארמית}} {{lang|arc-Latn|texte=''Arāmît''}},}}","ארמית ''Arāmît'',}}"],
-            ["ce qui augmente le risque de {{lang|en|''[[Mémoire virtuelle#Swapping|swapping]]''}})","ce qui augmente le risque de ''[[Mémoire virtuelle#Swapping|swapping]]'')"]
-        ]
-
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testDateShort(self):
-        tests=[
-            ["{{1er janvier}}","1<sup>er</sup> janvier"],
-            [u"{{1er février}}",u"1<sup>er</sup> février"],
-            [u"Le {{1er mars}}, le débarquement, prévu ",u"Le 1<sup>er</sup> mars, le débarquement, prévu "],
-            ["{{1er avril}}","1<sup>er</sup> avril"],
-            ["{{1er mai}}","1<sup>er</sup> mai"],
-            ["{{1er juin}}","1<sup>er</sup> juin"],
-            ["{{1er juillet}}","1<sup>er</sup> juillet"],
-            [u"{{1er août}}",u"1<sup>er</sup> août"],
-            ["{{1er septembre}}","1<sup>er</sup> septembre"],
-            ["{{1er octobre}}","1<sup>er</sup> octobre"],
-            ["{{1er novembre}}","1<sup>er</sup> novembre"],
-            [u"{{1er décembre}}",u"1<sup>er</sup> décembre"],
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]),t[1])
-
-    def testDate(self):
-        tests=[
-            ["{{date|10|août|1425}}","10 août 1425"],
-            ["{{Date|10|août|1989}} - {{Date|28|février|1990}}","10 août 1989 - 28 février 1990"],
-            ["{{date|6|février|1896|en France}}","6 février 1896"],
-            ["{{Date|1er|janvier|537}}","1er janvier 537"],
-            ["{{Date||Octobre|1845|en sport}}","Octobre 1845"],
-            ["{{Date|1|octobre|2005|dans les chemins de fer}}","1er octobre 2005"],
-            ["les {{Date|25|mars}} et {{Date|8|avril|1990}}","les 25 mars et 8 avril 1990"],
-            [u"'''Jean-François Bergier''', né à [[Lausanne]], le {{date de naissance|5|décembre|1931}} et mort le {{date de décès|29|octobre|2009}}&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].",u"'''Jean-François Bergier''', né à [[Lausanne]], le 5 décembre 1931 et mort le 29 octobre 2009&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]]."],
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testSimpleSiecle(self):
-        tests=[
-                [u"{{Ier siècle}}, {{IIe siècle}}, ... {{XXe siècle}}, ...",u"Ier siècle, IIe siècle, ... XXe siècle, ..."],
-                [u"{{Ier siècle av. J.-C.}}, {{IIe siècle av. J.-C.}}, ...",u"Ier siècle av. J.-C., IIe siècle av. J.-C., ..."],
-                [u"{{Ier millénaire}}, {{IIe millénaire}}, ...",u"Ier millénaire, IIe millénaire, ..."],
-                [u"{{Ier millénaire av. J.-C.}}, {{IIe millénaire av. J.-C.}}, ...",u"Ier millénaire av. J.-C., IIe millénaire av. J.-C., ..."],
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testGSiecles(self):
-        tests=[
-                [u"{{sp|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
-                [u"{{sp-|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
-                [u"{{-sp|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
-                [u"{{-sp-|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
-                [u"au {{sp-|XII|e|et au|XVI|e}}",u"au XIIe et au XVIe siècle"],
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-
-
-    def testTemperature(self):
-        tests=[
-                [u"température supérieure à {{tmp|10|°C}}.",u"température supérieure à 10°C."],
-                [u"Il se décompose de façon explosive aux alentours de {{tmp|95|°C}}.",u"Il se décompose de façon explosive aux alentours de 95°C."],
-                [u"Entre 40 et {{tmp|70|°C}}",u"Entre 40 et 70°C"],
-                 ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testSiecle(self):
-        tests=[
-                ["{{s|III|e}}",     u"IIIe siècle"],
-                ["{{-s|III|e}}",    u"IIIe siècle av. J.-C. "],
-                ["{{s-|III|e}}",    u"IIIe siècle"],
-                ["{{-s-|III|e}}",   u"IIIe siècle av. J.-C. "],
-                ["{{s2|III|e|IX|e}}",   u"IIIe et IXe siècles"],
-                ["{{-s2|III|e|IX|e}}",  u"IIIe et IXe siècles av. J.-C. "],
-                ["{{s2-|III|e|IX|e}}",  u"IIIe et IXe siècles"],
-                ["{{-s2-|III|e|IX|e}}",     u"IIIe et IXe siècles av. J.-C. "],
-                [u"{{s-|XIX|e|}}", u"XIXe siècle"],
-
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-    def testUnit(self):
-        tests=[
-                [u"{{Unité|1234567}}","1 234 567"],
-                [u"{{Unité|1234567.89}}","1 234 567.89"],
-                [u"{{Unité|1234567,89}}","1 234 567.89"],
-                [u"{{Unité|1.23456789|e=15}}",u"1.23456789×10<sup>15</sup>"],
-                [u"{{Unité|10000|km}}",u"10 000 km"],
-                [u"{{nombre|8|[[bit]]s}}",u"8 [[bit]]s"],
-                [u"{{nombre|1000|[[yen]]s}}",u"1 000 [[yen]]s"],
-                [u"{{nombre|9192631770|périodes}}",u"9 192 631 770 périodes"],
-                [u"{{nombre|3620|hab. par km|2}}",u"3 620 hab. par km<sup>2</sup>"],
-                [u"{{Unité|10000|km/h}}","10 000 km/h"],
-
-                [u"{{Unité|10000|km|2}}","10 000 km<sup>2</sup>"],
-                [u"{{Unité|10000|m|3}}","10 000 m<sup>3</sup>"],
-                [u"{{Unité|10000|km||h|-1}}",u"10 000 km⋅h<sup>-1</sup>"],
-                [u"{{Unité|10000|J|2|K|3|s|-1}}",u"10 000 J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>"],
-                [u"{{Unité|10000|J||kg||m|-2}}",u"10 000 J⋅kg⋅m<sup>-2</sup>"],
-                [u"{{Unité|-40.234|°C}}",u"-40.234 °C"],
-                [u"{{Unité|1.23456|e=9|J|2|K|3|s|-1}}",u"1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>"],
-                [u"{{Unité|1,23456|e=9|J|2|K|3|s|-1}}",u"1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>"],
-        ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testFormatNum(self):
-        tests=[
-                [u"Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}",u"Elle comporte plus de 1 000 [[espèce]]s dans 90"],
-                ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testJaponais(self):
-        tests=[
-                [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}",u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
-                [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}",u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
-                [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un",u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
-            ]
-
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-    def testNobr(self):
-        tests=[
-                [u"{{nobr|[[préfixe binaire|préfixes binaires]]}}",u"<span class=\"nowrap\">[[préfixe binaire|préfixes binaires]]</span>"],
-                [u"{{nobr|93,13x2{{exp|30}} octets}}",u"<span class=\"nowrap\">93,13x2<sup>30</sup> octets</span>"]
-            ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-
-    def testHeures(self):
-        tests=[
-                [u"{{heure|8}}",u"8 h"],
-                [u"{{heure|22}}",u"22 h"],
-                [u"{{heure|1|55}}",u"1 h 55"],
-                [u"{{heure|10|5}}",u"10 h 5"],
-                [u"{{heure|22|55|00}}",u"22 h 55 min 00 s"],
-            ]
-        for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
-
-def main():
-    unittest.main()
-
-if __name__ == '__main__':
-    locale.setlocale(locale.LC_ALL, 'fr_FR.utf-8')
-    main()
 

@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import sqlite3
 from time import strftime
 
@@ -9,19 +7,23 @@ dbversion = u'0.0.0.1'
 class OutputSqlite:
 
     REQUIRED_INFO_TAGS = [
-        'lang-code','lang-local','lang-english',
-        'type', 'source','author'
+        u'lang-code', u'lang-local', u'lang-english',
+        u'type', u'source', u'author'
     ]
 
     def __init__(self, sqlite_file, max_page_count=None):
-        self.sqlite_file=sqlite_file
-        self.conn = sqlite3.connect(sqlite_file)
+        if sqlite_file:
+            self.sqlite_file=sqlite_file
+            self.conn = sqlite3.connect(sqlite_file)
+        else:
+            self.conn = sqlite3.connect(u':memory:')
+            
         self.conn.isolation_level="EXCLUSIVE"
         self.cursor = self.conn.cursor()
         self.cursor.execute("PRAGMA synchronous=NORMAL")
         self.cursor.execute("PRAGMA journal_mode=MEMORY")
         if (max_page_count!=None):
-            self.set_max_page_count(max_page_count)
+            self.SetMaxPageCount(max_page_count)
 
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS articles (_id INTEGER PRIMARY KEY AUTOINCREMENT, 
                                                                   title VARCHAR(255) NOT NULL,
@@ -36,26 +38,23 @@ class OutputSqlite:
         self.max_inserts = 1000
 
 
-    def set_metadata(self, infos):
-        self.check_required_infos(infos)
+    def SetMetadata(self, infos):
+        self._CheckRequiredInfos(infos)
 
-        self.set_lang(infos['lang-code'],infos['lang-local'],infos['lang-english'])
-        self.set_gen_date(strftime("%Y-%m-%d %H:%M:%S"))
-        self.set_version(version)
-        self.set_source(infos['source'])
-        self.set_author(infos['author'])
-        self.set_type(infos['type'])
+        self._SetLang(infos[u'lang-code'],infos[u'lang-local'],infos[u'lang-english'])
+        self._SetGenDate(strftime(u'%Y-%m-%d %H:%M:%S'))
+        self._SetVersion(version)
+        self._SetSource(infos[u'source'])
+        self._SetAuthor(infos[u'author'])
+        self._SetType(infos[u'type'])
 
-
-    def check_required_infos(self,infos):
+    def _CheckRequiredInfos(self, infos):
         for key in self.REQUIRED_INFO_TAGS:
             res = infos.get(key, None)
             if not res:
-                print("We lack required infos : %s"%key)
-                sys.exit(1)
+                raise Exception(u'We lack required infos : {0:s}'.format(key))
 
-
-    def set_max_page_count(self,max_page_count):
+    def SetMaxPageCount(self,max_page_count):
         self.cursor.execute(u'PRAGMA max_page_count=%d'%max_page_count)
 
     def AddRedirect(self, source, dest):
@@ -64,34 +63,25 @@ class OutputSqlite:
             self.redirects_buffer = []
         self.redirects_buffer.append((source, dest))
 
-    def set_lang(self,lang_code,lang_local,lang_english):
+    def _SetLang(self,lang_code,lang_local,lang_english):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-code',?)",(lang_code,))
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang_local,))
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(lang_english,))
 
-    def set_langlocal(self,lang):
-        self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-local',?)",(lang,))
-
-    def set_langenglish(self,lang):
-        self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('lang-english',?)",(lang,))
-
-    def set_gen_date(self,sdate):
+    def _SetGenDate(self,sdate):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('date',?)",(sdate,))
 
-    def set_version(self,version):
+    def _SetVersion(self,version):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('version',?)",(version,))
 
-    def set_type(self,stype):
+    def _SetType(self,stype):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('type',?)",(stype,))
 
-    def set_author(self,stype):
+    def _SetAuthor(self,stype):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('author',?)",(stype,))
 
-    def set_source(self,stype):
+    def _SetSource(self,stype):
         self.cursor.execute("INSERT OR REPLACE INTO metadata VALUES ('source',?)",(stype,))
-
-    def reserve(self,size):
-        pass
 
     def AddArticle(self, title, text):
         if (len(self.articles_buffer) == self.max_inserts):
@@ -99,11 +89,14 @@ class OutputSqlite:
             self.articles_buffer = []
         self.articles_buffer.append((title,text))
             
-    def Close(self):
+    def _AllCommit(self):
         if (len(self.articles_buffer) > 0):
             self.cursor.executemany("INSERT INTO articles VALUES (NULL,?,?)",self.articles_buffer)
         if (len(self.redirects_buffer) > 0):
             self.cursor.executemany("INSERT INTO redirects VALUES (?,?)",self.redirects_buffer)
+
+    def Close(self):
+        self._AllCommit()
         self.cursor.execute("CREATE INDEX tidx1 ON articles(title)")
         self.cursor.execute("CREATE INDEX tidx2 ON redirects(title_from)")
         self.cursor.execute("CREATE VIRTUAL TABLE searchTitles USING fts3(_id, title);")

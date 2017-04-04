@@ -1,5 +1,3 @@
-#lol
-
 ##
 # Whether to preseve links in output
 #
