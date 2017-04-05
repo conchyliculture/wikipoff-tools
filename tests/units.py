@@ -1,14 +1,19 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
+# coding: utf-8
 
-import sys
-sys.path.append("..")
-
-import unittest
-from lib.writer.sqlite import OutputSqlite
-from lib.wikimedia.languages import wikifr
+from __future__ import unicode_literals
 
 import locale
+import sys
+sys.path.append("..")
+import os.path
+import unittest
+from lib.writer.sqlite import OutputSqlite
+from lib.wikimedia.converter import WikiConverter
+from lib.wikimedia.languages import wikifr
+from lib.wikimedia.XMLworker import XMLworker
+import lib.wikimedia.wikitools as wikitools
+
 locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
 
 class TestSQLWriter(unittest.TestCase):
@@ -36,7 +41,7 @@ class TestSQLWriter(unittest.TestCase):
         o._AllCommit()
 
         o.cursor.execute(u'SELECT * FROM redirects')
-        self.assertEqual(test_redirect,  o.cursor.fetchone())
+        self.assertEqual(test_redirect, o.cursor.fetchone())
 
     def test_AddArticle(self):
         o = OutputSqlite(None)
@@ -45,7 +50,7 @@ class TestSQLWriter(unittest.TestCase):
         o._AllCommit()
 
         o.cursor.execute(u'SELECT * FROM articles')
-        self.assertEqual((1, test_article[0], test_article[1]),  o.cursor.fetchone())
+        self.assertEqual((1, test_article[0], test_article[1]), o.cursor.fetchone())
 
     def test_Close(self):
         o = OutputSqlite(None)
@@ -74,10 +79,10 @@ class TestWIkiFr(unittest.TestCase):
         ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testDateShort(self):
-        tests=[
+        tests = [
             [u'{{1er janvier}}', u'1<sup>er</sup> janvier'],
             [u'{{1er février}}', u'1<sup>er</sup> février'],
             [u'Le {{1er mars}}, le débarquement, prévu ', u'Le 1<sup>er</sup> mars, le débarquement, prévu '],
@@ -92,7 +97,7 @@ class TestWIkiFr(unittest.TestCase):
             [u'{{1er décembre}}', u'1<sup>er</sup> décembre'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]),t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testDate(self):
         tests = [
@@ -106,53 +111,52 @@ class TestWIkiFr(unittest.TestCase):
             [u'Jean-François Bergier, né à [[Lausanne]], le {{date de naissance|5|décembre|1931}} et mort le {{date de décès|29|octobre|2009}}&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].', u'Jean-François Bergier, né à [[Lausanne]], le 5 décembre 1931 et mort le 29 octobre 2009&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testSimpleSiecle(self):
-        tests=[
-                [u"{{Ier siècle}}, {{IIe siècle}}, ... {{XXe siècle}}, ...",u"Ier siècle, IIe siècle, ... XXe siècle, ..."],
-                [u"{{Ier siècle av. J.-C.}}, {{IIe siècle av. J.-C.}}, ...",u"Ier siècle av. J.-C., IIe siècle av. J.-C., ..."],
-                [u"{{Ier millénaire}}, {{IIe millénaire}}, ...",u"Ier millénaire, IIe millénaire, ..."],
-                [u"{{Ier millénaire av. J.-C.}}, {{IIe millénaire av. J.-C.}}, ...",u"Ier millénaire av. J.-C., IIe millénaire av. J.-C., ..."],
+        tests = [
+            [u'{{Ier siècle}}, {{IIe siècle}}, ... {{XXe siècle}}, ...', u'Ier siècle, IIe siècle, ... XXe siècle, ...'],
+            [u'{{Ier siècle av. J.-C.}}, {{IIe siècle av. J.-C.}}, ...', u'Ier siècle av. J.-C., IIe siècle av. J.-C., ...'],
+            [u'{{Ier millénaire}}, {{IIe millénaire}}, ...', u'Ier millénaire, IIe millénaire, ...'],
+            [u'{{Ier millénaire av. J.-C.}}, {{IIe millénaire av. J.-C.}}, ...', u'Ier millénaire av. J.-C., IIe millénaire av. J.-C., ...'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testGSiecles(self):
-        tests=[
-                [u"{{sp|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
-                [u"{{sp-|VII|e|ou|VIII|e|}}",u"VIIe ou VIIIe siècle"],
-                [u"{{-sp|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
-                [u"{{-sp-|IX|e|-|VII|e|s}}",u"IXe - VIIe siècles av. J.-C."],
-                [u"au {{sp-|XII|e|et au|XVI|e}}",u"au XIIe et au XVIe siècle"],
+        tests = [
+            [u'{{sp|VII|e|ou|VIII|e|}}', u'VIIe ou VIIIe siècle'],
+            [u'{{sp-|VII|e|ou|VIII|e|}}', u'VIIe ou VIIIe siècle'],
+            [u'{{-sp|IX|e|-|VII|e|s}}', u'IXe - VIIe siècles av. J.-C.'],
+            [u'{{-sp-|IX|e|-|VII|e|s}}', u'IXe - VIIe siècles av. J.-C.'],
+            [u'au {{sp-|XII|e|et au|XVI|e}}', u'au XIIe et au XVIe siècle'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testTemperature(self):
-        tests=[
+        tests = [
             [u'température supérieure à {{tmp|10|°C}}.', u'température supérieure à 10°C.'],
             [u'Il se décompose de façon explosive aux alentours de {{tmp|95|°C}}.', u'Il se décompose de façon explosive aux alentours de 95°C.'],
             [u'Entre 40 et {{tmp|70|°C}}', u'Entre 40 et 70°C'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testSiecle(self):
-        tests=[
-                ["{{s|III|e}}",     u"IIIe siècle"],
-                ["{{-s|III|e}}",    u"IIIe siècle av. J.-C. "],
-                ["{{s-|III|e}}",    u"IIIe siècle"],
-                ["{{-s-|III|e}}",   u"IIIe siècle av. J.-C. "],
-                ["{{s2|III|e|IX|e}}",   u"IIIe et IXe siècles"],
-                ["{{-s2|III|e|IX|e}}",  u"IIIe et IXe siècles av. J.-C. "],
-                ["{{s2-|III|e|IX|e}}",  u"IIIe et IXe siècles"],
-                ["{{-s2-|III|e|IX|e}}",     u"IIIe et IXe siècles av. J.-C. "],
-                [u"{{s-|XIX|e|}}", u"XIXe siècle"],
-
+        tests = [
+            ["{{s|III|e}}", u"IIIe siècle"],
+            ["{{-s|III|e}}", u"IIIe siècle av. J.-C. "],
+            ["{{s-|III|e}}", u"IIIe siècle"],
+            ["{{-s-|III|e}}", u"IIIe siècle av. J.-C. "],
+            ["{{s2|III|e|IX|e}}", u"IIIe et IXe siècles"],
+            ["{{-s2|III|e|IX|e}}", u"IIIe et IXe siècles av. J.-C. "],
+            ["{{s2-|III|e|IX|e}}", u"IIIe et IXe siècles"],
+            ["{{-s2-|III|e|IX|e}}", u"IIIe et IXe siècles av. J.-C. "],
+            [u"{{s-|XIX|e|}}", u"XIXe siècle"],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testUnit(self):
         tests = [
@@ -176,48 +180,132 @@ class TestWIkiFr(unittest.TestCase):
 #            [u'{{Unité|1.23456|e=9|J|2|K|3|s|-1}}', u'1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testFormatNum(self):
-        tests=[
-                [u"Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}",u"Elle comporte plus de 1 000 [[espèce]]s dans 90"],
-                ]
+        tests = [
+            [u'Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}', u'Elle comporte plus de 1 000 [[espèce]]s dans 90'],
+        ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testJaponais(self):
-        tests=[
-                [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}",u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
-                [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}",u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
-                [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un",u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
-            ]
+        tests = [
+            [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}", u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
+            [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}", u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
+            [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un", u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
+        ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testNobr(self):
-        tests=[
-                [u"{{nobr|[[préfixe binaire|préfixes binaires]]}}",u"<span class=\"nowrap\">[[préfixe binaire|préfixes binaires]]</span>"],
-                [u"{{nobr|93,13x2{{exp|30}} octets}}",u"<span class=\"nowrap\">93,13x2<sup>30</sup> octets</span>"]
-            ]
+        tests = [
+            [u'{{nobr|[[préfixe binaire|préfixes binaires]]}}', u'<span class="nowrap">[[préfixe binaire|préfixes binaires]]</span>'],
+            [u'{{nobr|93,13x2{{exp|30}} octets}}', u'<span class="nowrap">93,13x2<sup>30</sup> octets</span>']
+        ]
+
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
 
     def testHeures(self):
-        tests=[
-                [u"{{heure|8}}",u"8 h"],
-                [u"{{heure|22}}",u"22 h"],
-                [u"{{heure|1|55}}",u"1 h 55"],
-                [u"{{heure|10|5}}",u"10 h 5"],
-                [u"{{heure|22|55|00}}",u"22 h 55 min 00 s"],
-            ]
+        tests = [
+            [u'{{heure|8}}', u'8 h'],
+            [u'{{heure|22}}', u'22 h'],
+            [u'{{heure|1|55}}', u'1 h 55'],
+            [u'{{heure|10|5}}', u'10 h 5'],
+            [u'{{heure|22|55|00}}', u'22 h 55 min 00 s'],
+        ]
         for t in tests:
-            self.assertEqual(self.sfrt.translate(t[0]), t[1])
+            self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def test_allowed_title(self):
-        self.assertEqual(False, self.sfrt.IsAllowedTitle(u'Module'))
-        self.assertEqual(True, self.sfrt.IsAllowedTitle(u'Lolilol'))
+        self.assertEqual(False, wikitools.IsAllowedTitle(u'Modèle', wikitype=u'wikipedia', lang=u'fr'))
+        self.assertEqual(True, wikitools.IsAllowedTitle(u'Lolilol', wikitype=u'wikipedia', lang=u'fr'))
+
+class TestXMLworkerClass(XMLworker):
+    def __init__(self, input_file, output_array):
+        super(TestXMLworkerClass, self).__init__(input_file)
+        self.GENERATED_STUFF = output_array
+
+    def GenerateMessage(self, title, body, msgtype):
+        self.GENERATED_STUFF.append({u'type': msgtype, u'title': title, u'body': body})
+
+class TestXMLworker(unittest.TestCase):
+
+    def setUp(self):
+        self.GENERATED_STUFF = []
+        self.xmlw = TestXMLworkerClass(
+            os.path.join(u'test_data', u'frwiki-latest-pages-articles.xml.short'),
+            self.GENERATED_STUFF)
+
+        self.xmlw._ProcessData()
+
+    def test_GetInfos(self):
+        self.maxDiff = None
+        expected_infos = {
+            u'lang': u'fr',
+            u'generator': u'MediaWiki 1.29.0-wmf.18',
+            u'author': u'renzokuken @ Wikipoff-tools',
+            u'sitename': u'Wikipédia',
+            u'lang-english': u'French',
+            u'lang-local': u'Français',
+            u'source': u'https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Accueil_principal',
+            u'base': u'https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Accueil_principal',
+            u'lang-code': u'fr',
+            u'type': u'Wikipédia',
+            u'dbname': u'frwiki'}
+        self.assertEqual(expected_infos, self.xmlw.infos)
+
+    def test_wikitype(self):
+        self.assertEqual(u'wikipedia', self.xmlw.wikitype)
+
+    def test_ProcessData(self):
+        self.xmlw._ProcessData()
+
+        generated_redirect = self.GENERATED_STUFF[10]
+        self.assertEqual(
+            u'Sigles en médecine', generated_redirect[u'title'])
+        self.assertEqual(
+            u'Liste d\'abréviations en médecine', generated_redirect[u'body'])
+        self.assertEqual(1, generated_redirect[u'type'])
+
+        generated_article = self.GENERATED_STUFF[-1]
+        self.assertEqual(
+            u'Aude (département)', generated_article[u'title'])
+        self.assertEqual(
+            u'{{Voir homonymes|Aude}}\n{{Infobox Département de France', generated_article[u'body'][0:55])
+        self.assertEqual(17357, len(generated_article[u'body']))
+        self.assertEqual(2, generated_article[u'type'])
+
+        generated_article_colon_allowed = self.GENERATED_STUFF[-2]
+        self.assertEqual(
+            u'Race:Chie', generated_article_colon_allowed[u'title'])
+        self.assertEqual(
+            u'osef ', generated_article_colon_allowed[u'body'])
+        self.assertEqual(2, generated_article_colon_allowed[u'type'])
+
+        generated_article_colon_notallowed = self.GENERATED_STUFF[-3]
+        self.assertEqual(u'Aube (département)', generated_article_colon_notallowed[u'title'])
+
+class TestConverter(unittest.TestCase):
+    def setUp(self):
+        self.GENERATED_STUFF = []
+        self.xmlw = TestXMLworkerClass(
+            os.path.join(u'test_data', u'frwiki-latest-pages-articles.xml.short'),
+            self.GENERATED_STUFF)
+        self.xmlw._ProcessData()
+
+    def test_Convert(self):
+        c = WikiConverter(u'wikipedia', u'fr')
+        a = self.GENERATED_STUFF[-1]
+
+        (title, body) = c.Convert(a[u'title'], a[u'body'])
+
+        with open('test_data/aude.html', 'w') as out:
+            out.write(body)
+
 
 if __name__ == '__main__':
     unittest.main()

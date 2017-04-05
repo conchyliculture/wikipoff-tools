@@ -18,6 +18,7 @@ from multiprocessing import Process
 
 from lib.writer.sqlite import OutputSqlite 
 from lib.wikimedia.XMLworker import XMLworker
+from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia import wikitools
 
 
@@ -33,6 +34,7 @@ class Main(object):
 
         self.output = OutputSqlite(output_file)
         self.xml_extractor = XMLworker(input_file)
+        self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr') 
 
         self.context = zmq.Context()
 
@@ -112,8 +114,8 @@ class Main(object):
             if socks.get(work_receiver) == zmq.POLLIN:
                 message_json = work_receiver.recv_json()
                 if message_json[u'type'] == 2:
-                    title, body = wikitools.WikiConvertToHTML(
-                            message_json[u'title'], message_json[u'body'], self.xml_extractor.GetTranslator())
+                    title, body = self.wikiconverter.Convert(
+                            message_json[u'title'], message_json[u'body'])
                     c = pylzma.compressfile(StringIO(body),dictionary=23)
                     result = c.read(5)
                     result+=struct.pack('<Q', len(body))

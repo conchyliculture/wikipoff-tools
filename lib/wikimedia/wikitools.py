@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
 import re
-import lib.wikimedia.languages as languages
+import lib.wikimedia.languages.wikifr as wikifr 
 import lib.wikimedia.wikiglobals as wikiglobals
 try:
     from htmlentitydefs import name2codepoint
@@ -10,33 +12,20 @@ except:
 
 toomanybr = re.compile(r'<br/>(<br/>(?:<br/>)+)')
 
-
-class WikimediaTranslator(object):
-    def __init__(self, wiki=u'wikipedia', lang=u'en'):
-        self.lang = lang
-        self.wiki = wiki
-        self.translator = self._SetTranslator()
-
-    def IsAllowedTitle(self, title):
+def IsAllowedTitle(title, wikitype=None, lang=None):
+    t = GetLanguageModule(wikitype, lang)
+    if t:
+        return t.IsAllowedTitle(title)
+    else:
         return title not in [
             u'Blog', u'Category', u'Category talk', u'Discussion', u'File', u'File talk',
             'Forum', u'Forum talk', u'Help', u'Help talk', u'MediaWiki', u'MediaWiki talk',
             'Talk', u'Template', u'Template talk', u'User', u'User blog', u'User talk', u'User blog comment']
 
-    def translate(self, input_text):
-        return self.translator.translate(input_text)
-
-    def _SetTranslator(self):
-        if self.wiki == u'wikipedia':
-            if self.lang == u'fr':
-                self.translator = languages.wikifr.WikiFRTranslator()
-
-#    def get_is_allowed_title_func(self):
-#        if self.wiki == u'wikipedia':
-#            if self.lang == u'fr':
-#                return languages.wikifr.is_allowed_title
-#
-#        return languages.wikien.is_allowed_title
+def GetLanguageModule(wikitype, lang):
+    if wikitype == u'wikipedia':
+        if lang == u'fr':
+            return wikifr.WikiFRTranslator
 
 def WikiConvertToHTML(title, text, translator):
     buff = u''
@@ -224,7 +213,7 @@ def make_anchor_tag(match):
 
 def clean(text, translator):
 
-    text = translator.translate(text)
+    text = translator.Translate(text)
 
     # FIXME: templates should be expanded
     # Drop transclusions (template, parser functions)

@@ -19,13 +19,18 @@
 #     You should have received a copy of the GNU General Public License
 #     along with WikipOff.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import unicode_literals
+
 import re
-import sys
 import locale
-import lib.wikimedia.wikitools as tools
 
 
-class WikiFRTranslator(tools.WikimediaTranslator):
+class WikiFRTranslator(object):
+    @staticmethod
+    def IsAllowedTitle(title):
+        return title not in [
+            u'Modèle', u'Catégorie', u'Portail', u'Fichier', u'Wikipédia',
+            u'Projet', u'Référence', u'MediaWiki', u'Aide', u'Module']
     def __init__(self):
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
@@ -35,7 +40,7 @@ class WikiFRTranslator(tools.WikimediaTranslator):
         self.fr_saveHeureTemplatesRE = re.compile(
             r'{{heure((\|(\d\d?))+)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveDateTemplatesRE = re.compile(
-            ur'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}',
+            r'{{date(?: de naissance| de décès)?\|(|\d+(?:er)?)\|([^|}]+)\|?(\d*)(?:\|[^}]+)?}}',
             re.IGNORECASE|re.UNICODE)
         self.fr_saveDateShortTemplatesRE = re.compile(
             r'{{1er (janvier|f.vrier|mars|avril|mai|juin|juillet|ao.t|septembre|octobre|novembre|d.cembre)}}',
@@ -45,11 +50,11 @@ class WikiFRTranslator(tools.WikimediaTranslator):
         self.fr_saveUnitsTemplatesRE = re.compile(
             r'{{(?:unit.|nombre|num|nau)\|([^|{}]+(?:\|[^{}|]*)*)}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveTemperatureTemplatesRE = re.compile(
-            ur'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
+            r'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveRefIncTemplatesRE = re.compile(
             r'{{Référence [^|}]+\|([^|]+)}}', re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
         self.fr_saveNumeroTemplatesRE = re.compile(
-            ur'{{(numéro|n°|nº)}}', re.IGNORECASE)
+            r'{{(numéro|n°|nº)}}', re.IGNORECASE)
         self.fr_saveCitationTemplatesRE = re.compile(
             r'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}', re.IGNORECASE)
         self.fr_savePassageEvasifTemplatesRE = re.compile(
@@ -109,13 +114,9 @@ class WikiFRTranslator(tools.WikimediaTranslator):
         self.bRE = re.compile(r'</math>')
         self.locale_set = False
 
-    def IsAllowedTitle(self, title):
-        return title not in [
-            u'Modèle', u'Catégorie', u'Portail', u'Fichier', u'Wikipédia',
-            u'Projet', u'Référence', u'MediaWiki', u'Aide', u'Module']
 
-    def translate(self, input_text):
-        if self.locale_set == False:
+    def Translate(self, input_text):
+        if not self.locale_set:
             locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
             self.locale_set = True
         text = input_text
@@ -179,7 +180,7 @@ class WikiFRTranslator(tools.WikimediaTranslator):
 
     def fr_savePasspromotionnelTemplates(self, text):
         return self.fr_savePasspromotionnelTemplatesRE.sub(
-           r'\1<sup>[passage promotionnel]</sup>', text)
+            r'\1<sup>[passage promotionnel]</sup>', text)
 
     def fr_savePassIneditTemplates(self, text):
         return self.fr_savePassIneditTemplatesRE.sub(
@@ -204,21 +205,20 @@ class WikiFRTranslator(tools.WikimediaTranslator):
         nb = m.group(2)
         if nb:
             try:
-                siecle = u''
                 avjc = u''
                 a, b, c = nb.split(u'|', 2)
                 if a.startswith(u'-'):
                     avjc = u' av. J.-C. '
                 if a.startswith(u's2'):
-                    _, d, e = c.split(u'|')
+                    _, d, _ = c.split(u'|')
                     return b+u'e et '+d+u'e siècles'+avjc
                 elif a.startswith(u'-s2'):
-                    _, d, e = c.split(u'|')
+                    _, d, _ = c.split(u'|')
                     return b+u'e et '+d+u'e siècles'+avjc
 
                 else:
                     return b+u'e siècle'+avjc
-            except ValueError as e:
+            except ValueError:
                 # Failing humbly...
                 return nb
         else:
@@ -233,8 +233,6 @@ class WikiFRTranslator(tools.WikimediaTranslator):
         res = u''
         if nb:
             try:
-                siecle = u''
-                avjc = u''
                 a, b, c, d, e, f = nb.split(u'|', 5)
                 if a.startswith(u'-'):
                     res = u' av. J.-C.'
@@ -247,12 +245,12 @@ class WikiFRTranslator(tools.WikimediaTranslator):
 
                 return u'%s%s %s %s%s %s%s'%(b, c, d, e, f, si, res)
             except ValueError as e:
-                # Failing humbly...
                 raise e
-                return nb
-        else:
-            nb = m.group(1)
-            return nb
+                # Failing humbly...
+                #return nb
+#        else:
+#            nb = m.group(1)
+#            return nb
 
     def fr_saveSieclesGTemplates(self, text):
         return re.sub(self.fr_saveSieclesGTempaltesRE, self.replgsiecles, text)
@@ -336,7 +334,7 @@ class WikiFRTranslator(tools.WikimediaTranslator):
             r'<span style=\"font-family:monospace, Courier\">\1</span>', text)
 
     def fr_saveTemperatureTemplates(self, text):
-        return self.fr_saveTemperatureTemplatesRE.sub(ur'\1°C', text)
+        return self.fr_saveTemperatureTemplatesRE.sub(r'\1°C', text)
 
     def repljaponais(self, m):
         return m.group(1)+u' ('+m.group(2).replace(u'|', u', ').replace(u'extra=', u'')+u')'
@@ -394,7 +392,7 @@ class WikiFRTranslator(tools.WikimediaTranslator):
             if len(virg) > 1:
                 res += u'.' + virg[1]
             return res
-        except ValueError as e:
+        except ValueError:
             # Failing humbly...
             return num
 
@@ -409,11 +407,11 @@ class WikiFRTranslator(tools.WikimediaTranslator):
             exp = u' '
             tab = []
             for s in l[1:]:
-                index =s.find(u'=')
+                index = s.find(u'=')
                 if index > 0:
                     s = s[2:]
                     exp = u'×10'
-                if (re.match(r'-?[0-9]', s)):
+                if re.match(r'-?[0-9]', s):
                     tab.append(u'%s<sup>%s</sup>'%(dot, self.num_to_loc(s)))
                 elif s == u'':
                     tab.append(dot)
