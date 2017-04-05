@@ -1,50 +1,53 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 import re
-import sys
-from lang import *
-import wikiglobals
+import lib.wikimedia.languages as languages
+import lib.wikimedia.wikiglobals as wikiglobals
 try:
     from htmlentitydefs import name2codepoint
-except :
-    from html.entities import name2codepoint 
+except:
+    from html.entities import name2codepoint
+
+toomanybr = re.compile(r'<br/>(<br/>(?:<br/>)+)')
 
 
-toomanybr=re.compile(r'<br/>(<br/>(?:<br/>)+)')
+class WikimediaTranslator(object):
+    def __init__(self, wiki=u'wikipedia', lang=u'en'):
+        self.lang = lang
+        self.wiki = wiki
+        self.translator = self._SetTranslator()
 
+    def IsAllowedTitle(self, title):
+        return title not in [
+            u'Blog', u'Category', u'Category talk', u'Discussion', u'File', u'File talk',
+            'Forum', u'Forum talk', u'Help', u'Help talk', u'MediaWiki', u'MediaWiki talk',
+            'Talk', u'Template', u'Template talk', u'User', u'User blog', u'User talk', u'User blog comment']
 
-class WikimediaTranslator():
-    def __init__(self,wiki='wikipedia',lang='en'):
-        self.lang=lang
-        self.wiki=wiki
-        self.set_save_func()
+    def translate(self, input_text):
+        return self.translator.translate(input_text)
 
-    def set_save_func(self):
-        if self.wiki=='wikipedia':
-            if self.lang=="fr":
-                self.save = wikifr.SaveFRTemplates().save
-                return
-        self.save =  lambda x: x
-
-    def get_is_allowed_title_func(self):
+    def _SetTranslator(self):
         if self.wiki == u'wikipedia':
             if self.lang == u'fr':
-                return wikifr.is_allowed_title
+                self.translator = languages.wikifr.WikiFRTranslator()
 
-        return wikien.is_allowed_title
+#    def get_is_allowed_title_func(self):
+#        if self.wiki == u'wikipedia':
+#            if self.lang == u'fr':
+#                return languages.wikifr.is_allowed_title
+#
+#        return languages.wikien.is_allowed_title
 
 def WikiConvertToHTML(title, text, translator):
-    buff=""
-    if translator == None:
-        print("You asked for conversion, and gave me no translator, wtf is wrong with you")
-        sys.exit
-    text = clean(text,translator)
+    buff = u''
+    if translator is None:
+        raise Exception(u'You asked for conversion, and gave me no translator, wtf is wrong with you')
+    text = clean(text, translator)
     for line in compact(text):
         buff += line#.encode('utf-8')
-    buff = toomanybr.sub(r'<br/><br/>',buff) 
-    buff=buff.replace(u'<math>',u'\(')
-    buff=buff.replace(u'</math>',u'\)')
+    buff = toomanybr.sub(r'<br/><br/>', buff)
+    buff = buff.replace(u'<math>', u'\(')
+    buff = buff.replace(u'</math>', u'\)')
 
     return (title, buff)
 
@@ -72,45 +75,47 @@ def unescape(text):
     return re.sub("&#?(\w+);", fixup, text)
 
 # Match list stars
-listsRE = re.compile(r'^\*+')
+LIST_RE = re.compile(r'^\*+')
 
 # Match HTML comments
-comment = re.compile(r'<!--.*?-->', re.DOTALL)
+COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
 
 # Match elements to ignore
-discard_element_patterns = []
-for tag in wikiglobals.discardElements:
+DISCARD_ELEMENT_PATTERNS = []
+for tag in wikiglobals.discard_elements:
     pattern = re.compile(r'<\s*%s\b[^>]*>.*?<\s*/\s*%s>' % (tag, tag), re.DOTALL | re.IGNORECASE)
-    discard_element_patterns.append(pattern)
+    DISCARD_ELEMENT_PATTERNS.append(pattern)
 
 # Match ignored tags
-ignored_tag_patterns = []
-def ignoreTag(tag):
+IGNORED_TAG_PATTERNS = []
+def IgnoreTag(tag):
     left = re.compile(r'<\s*%s\b[^>]*>' % tag, re.IGNORECASE)
     right = re.compile(r'<\s*/\s*%s>' % tag, re.IGNORECASE)
-    ignored_tag_patterns.append((left, right))
+    IGNORED_TAG_PATTERNS.append((left, right))
 
-for tag in wikiglobals.ignoredTags:
-    ignoreTag(tag)
+for tag in wikiglobals.ignored_tags:
+    IgnoreTag(tag)
 
 # Match selfClosing HTML tags
 selfClosing_tag_patterns = []
-for tag in wikiglobals.selfClosingTags:
+for tag in wikiglobals.self_closing_tags:
     pattern = re.compile(r'<\s*%s\b[^/]*/\s*>' % tag, re.DOTALL | re.IGNORECASE)
     selfClosing_tag_patterns.append(pattern)
 
 # Match HTML placeholder tags
 placeholder_tag_patterns = []
 for tag, repl in wikiglobals.placeholder_tags.items():
-    pattern = re.compile(r'<\s*%s(\s*| [^>]+?)>.*?<\s*/\s*%s\s*>' % (tag, tag), re.DOTALL | re.IGNORECASE)
+    pattern = re.compile(
+        r'<\s*%s(\s*| [^>]+?)>.*?<\s*/\s*%s\s*>' % (tag, tag),
+        re.DOTALL | re.IGNORECASE)
     placeholder_tag_patterns.append((pattern, repl))
 
 # Match preformatted lines
 preformatted = re.compile(r'^ .*?$', re.MULTILINE)
 
 # Match external links (space separates second optional parameter)
-externalLink = re.compile(r'\[\w+.*? (.*?)\]')
-externalLinkNoAnchor = re.compile(r'\[\w+[&\]]*\]')
+EXTERNAL_LINK_RE = re.compile(r'\[\w+.*? (.*?)\]')
+EXTERNAL_LINK_NO_ANCHOR_RE = re.compile(r'\[\w+[&\]]*\]')
 
 # Matches bold/italic
 bold_italic = re.compile(r"'''''([^']*?)'''''")
@@ -136,12 +141,12 @@ def dropNested(text, openDelim, closeDelim):
     if not start:
         return text
     end = closeRE.search(text, start.end())
-    next = start
+    next_ = start
     while end:
-        next = openRE.search(text, next.end())
-        if not next:            # termination
+        next_ = openRE.search(text, next_.end())
+        if not next_:            # termination
             while nest:         # close all pending
-                nest -=1
+                nest -= 1
                 end0 = closeRE.search(text, end.end())
                 if end0:
                     end = end0
@@ -149,7 +154,7 @@ def dropNested(text, openDelim, closeDelim):
                     break
             matches.append((start.start(), end.end()))
             break
-        while end.end() < next.start():
+        while end.end() < next_.start():
             # { } {
             if nest:
                 nest -= 1
@@ -166,10 +171,10 @@ def dropNested(text, openDelim, closeDelim):
             else:
                 matches.append((start.start(), end.end()))
                 # advance start, find next close
-                start = next
-                end = closeRE.search(text, next.end())
+                start = next_
+                end = closeRE.search(text, next_.end())
                 break           # { }
-        if next != start:
+        if next_ != start:
             # { { }
             nest += 1
     # collect text outside partitions
@@ -199,27 +204,27 @@ def dropSpans(matches, text):
 # Can be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
 # We first expand inner ones, than remove enclosing ones.
 #
-wikiLink = re.compile(r'\[\[([^[]*?)(?:\|([^[]*?))?\]\](\w*)')
+WIKI_LINK_RE = re.compile(r'\[\[([^[]*?)(?:\|([^[]*?))?\]\](\w*)')
 
-parametrizedLink = re.compile(r'\[\[.*?\]\]')
+PARAMETRIZED_RE = re.compile(r'\[\[.*?\]\]')
 
 # Function applied to wikiLinks
 def make_anchor_tag(match):
     link = match.group(1)
-    colon = link.find(':')
+    #colon = link.find(':')
     trail = match.group(3)
     anchor = match.group(2)
     if not anchor:
         anchor = link
     anchor += trail
-    if wikiglobals.keepLinks:
+    if wikiglobals.keep_links:
         return '<a href="%s">%s</a>' % (link, anchor)
     else:
         return anchor
 
-def clean(text,translator):
+def clean(text, translator):
 
-    text = translator.save(text)
+    text = translator.translate(text)
 
     # FIXME: templates should be expanded
     # Drop transclusions (template, parser functions)
@@ -230,13 +235,13 @@ def clean(text,translator):
     text = dropNested(text, r'{\|', r'\|}')
 
     # Expand links
-    text = wikiLink.sub(make_anchor_tag, text)
+    text = WIKI_LINK_RE.sub(make_anchor_tag, text)
     # Drop all remaining ones
-    text = parametrizedLink.sub('', text)
+    text = PARAMETRIZED_RE.sub('', text)
 
     # Handle external links
-    text = externalLink.sub(r'\1', text)
-    text = externalLinkNoAnchor.sub('', text)
+    text = EXTERNAL_LINK_RE.sub(r'\1', text)
+    text = EXTERNAL_LINK_NO_ANCHOR_RE.sub('', text)
 
     # Handle bold/italic/quote
     text = bold_italic.sub(r'<i>\1</i>', text)
@@ -257,8 +262,8 @@ def clean(text,translator):
 
     matches = []
     # Drop HTML comments
-    for m in comment.finditer(text):
-            matches.append((m.start(), m.end()))
+    for m in COMMENT_RE.finditer(text):
+        matches.append((m.start(), m.end()))
 
     # Drop self-closing tags
     for pattern in selfClosing_tag_patterns:
@@ -266,7 +271,7 @@ def clean(text,translator):
             matches.append((m.start(), m.end()))
 
     # Drop ignored tags
-    for left, right in ignored_tag_patterns:
+    for left, right in IGNORED_TAG_PATTERNS:
         for m in left.finditer(text):
             matches.append((m.start(), m.end()))
         for m in right.finditer(text):
@@ -277,32 +282,32 @@ def clean(text,translator):
 
     # Cannot use dropSpan on these since they may be nested
     # Drop discarded elements
-    for pattern in discard_element_patterns:
-        text = pattern.sub('', text)
+    for pattern in DISCARD_ELEMENT_PATTERNS:
+        text = pattern.sub(u'', text)
 
     # Expand placeholders
     for pattern, placeholder in placeholder_tag_patterns:
         index = 1
         for match in pattern.finditer(text):
-            text = text.replace(match.group(), '%s_%d' % (placeholder, index))
+            text = text.replace(match.group(), u'%s_%d' % (placeholder, index))
             index += 1
 
-    text = text.replace('<<', u'Â«').replace('>>', u'Â»')
+    text = text.replace(u'<<', u'Â«').replace(u'>>', u'Â»')
 
     #############################################
 
     # Drop preformatted
     # This can't be done before since it may remove tags
-    text = preformatted.sub('', text)
+    text = preformatted.sub(u'', text)
 
     # Cleanup text
-    text = text.replace('\t', ' ')
-    text = spaces.sub(' ', text)
-    text = dots.sub('...', text)
+    text = text.replace(u'\t', u' ')
+    text = spaces.sub(u' ', text)
+    text = dots.sub(u'...', text)
     text = re.sub(u' (,:\.\)\]Â»)', r'\1', text)
     text = re.sub(u'(\[\(Â«) ', r'\1', text)
     text = re.sub(r'\n\W+?\n', '\n', text) # lines with only punctuations
-    text = text.replace(',,', ',').replace(',.', '.')
+    text = text.replace(u',,', u',').replace(u',.', u'.')
     return text
 
 section = re.compile(r'(==+)\s*(.*?)\s*\1')
@@ -315,58 +320,57 @@ def compact(text):
     inList = 0              # whether opened <UL>
 
     for line in text.split(u'\n'):
-
         if not line:
-            if inList>0:
-                page.append("</ul>"*inList)
-                inList=0
-            page.append("<br/><br/>") # for lisibility
+            if inList > 0:
+                page.append(u'</ul>' * inList)
+                inList = 0
+            page.append(u'<br/><br/>') # for lisibility
             continue
         # Handle section titles
         m = section.match(line)
         if m:
             title = m.group(2)
             lev = len(m.group(1))
-            if wikiglobals.keepSections:
-                page.append("<h%d>%s</h%d>" % (lev, title, lev))
+            if wikiglobals.keep_sections:
+                page.append(u'<h%d>%s</h%d>' % (lev, title, lev))
             else:
-                if title and title[-1] not in '!?':
-                    title += '.'
+                if title and title[-1] not in u'!?':
+                    title += u'.'
             headers[lev] = title
             # drop previous headers
 #            for i, _ in headers.items():
 #                if i > lev:
 #                    del headers[i]V
-            headers = { k:v for k,v in headers.items() if k<= lev}
+            headers = {k:v for k, v in headers.items() if k <= lev}
             emptySection = True
             continue
         # Handle page title
-        if line.startswith('++'):
+        if line.startswith(u'++'):
             title = line[2:-2]
             if title:
-                if title[-1] not in '!?':
-                    title += '.'
+                if title[-1] not in u'!?':
+                    title += u'.'
                 page.append(title)
         # handle lists
-        elif line[0] in '*#:;':
+        elif line[0] in u'*#:;':
             try:
                 if wikiglobals.keepSections:
-                    listdepth = len(listsRE.search(line).group())
+                    listdepth = len(LIST_RE.search(line).group())
                     if listdepth > inList:
-                        page.append("<ul>" * (listdepth - inList))
+                        page.append(u'<ul>' * (listdepth - inList))
                     elif listdepth < inList:
-                        page.append("</ul>" * (inList - listdepth))
-                    inList=listdepth
-                    page.append("<li>%s</li>" % line[inList:])
+                        page.append(u'</ul>' * (inList - listdepth))
+                    inList = listdepth
+                    page.append(u'<li>%s</li>' % line[inList:])
                 else:
                     continue
             except AttributeError:
                 page.append(line)
         # Drop residuals of lists
-        elif line[0] in '{|' or line[-1] in '}':
+        elif line[0] in u'{|' or line[-1] in u'}':
             continue
         # Drop irrelevant lines
-        elif (line[0] == '(' and line[-1] == ')') or line.strip('.-') == '':
+        elif (line[0] == u'(' and line[-1] == u')') or line.strip(u'.-') == u'':
             continue
         elif len(headers):
 #            items = headers.items()
@@ -384,7 +388,8 @@ def compact(text):
 
 def handle_unicode(entity):
     numeric_code = int(entity[2:-1])
-    if numeric_code >= 0x10000: return ''
+    if numeric_code >= 0x10000:
+        return u''
     return unichr(numeric_code)
 
 #------------------------------------------------------------------------------

@@ -1,16 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import re
-import sqlite3
-import os
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
-import sys
-from lxml import etree
-import wikitools
 import datetime
 import getpass
-import tools
+import os
+import pprint
+import re
+import sqlite3
+import sys
+
+from lxml import etree
+
+import lib.wikimedia.wikitools as wikitools
+
+pp = pprint.PrettyPrinter(indent=4)
 
 class XMLworker(object):
 
@@ -21,7 +23,7 @@ class XMLworker(object):
         self.wikitype = self._GuessType()
         self.zmq_channel = None
 
-        self.is_allowed_title = self.GetTranslator().get_is_allowed_title_func()
+        self.translator = self.GetTranslator()
 
         if not os.path.isfile(self.languagedb):
             raise Exception(u'{0:s} doesn\'t exists. Please create it.'.format(self.languagedb))
@@ -42,7 +44,7 @@ class XMLworker(object):
         return wikitools.WikimediaTranslator(self.wikitype, self.infos[u'lang'])
 
     def _GuessType(self):
-        res= re.match(r'wikipedia\.org/wiki',self.infos[u'base'])
+        res = re.match(r'wikipedia\.org/wiki', self.infos[u'base'])
         if res is not None:
             return u'wikipedia'
         return None
@@ -53,16 +55,18 @@ class XMLworker(object):
 
         with open(self.xml_file, u'r') as xmlfd:
             line = xmlfd.readline()
-            res = re.match(r'<mediawiki.*xml:lang="(.+)"',line)
+            res = re.match(r'<mediawiki.*xml:lang="(.+)"', line)
             if not res:
-                raise Exception(u'Input is not a mediawiki xml file? Should start with \'<mediawiki\' and contain xml:lang="somelang"')
+                raise Exception(
+                    u'Input is not a mediawiki xml file? Should start with '
+                    u'\'<mediawiki\' and contain xml:lang="somelang"')
             else:
                 wiki_infos[u'lang'] = res.group(1)
 
-        for event, element in etree.iterparse(self.xml_file):
+        for _, element in etree.iterparse(self.xml_file):
             tag = element.tag
             index = tag.find(u'}')
-            if index >- 1:
+            if index > -1:
                 tag = tag[index+1:]
             if tag in infotags:
                 wiki_infos[tag] = element.text
@@ -74,8 +78,10 @@ class XMLworker(object):
 
         connlang = sqlite3.connect(self.languagedb)
         curslang = connlang.cursor()
-        curslang.execute(u'SELECT english, local FROM languages WHERE code LIKE ?',(wiki_infos[u'lang'],))
-        e,l = curslang.fetchone()
+        curslang.execute(
+            u'SELECT english, local FROM languages WHERE code LIKE ?',
+            (wiki_infos[u'lang'],))
+        e, l = curslang.fetchone()
         curslang.close()
         wiki_infos[u'lang-code'] = wiki_infos[u'lang']
         wiki_infos[u'lang-local'] = l
@@ -86,20 +92,20 @@ class XMLworker(object):
         pp.pprint(wiki_infos)
         return wiki_infos
 
-    def _ProcessData(self, zmq_channel):
-        contenttags = (u'text', u'title', u'id' )
+    def _ProcessData(self):
+        contenttags = (u'text', u'title', u'id')
         wikiarticle = {}
         i = 0
         eta_every = 100
         st = datetime.datetime.now()
 
-        inputsize =  os.path.getsize(self.xml_file)
+        inputsize = os.path.getsize(self.xml_file)
         stream = open(self.xml_file, 'rb')
 
-        for event, element in etree.iterparse(stream):
+        for _, element in etree.iterparse(stream):
             tag = element.tag
             index = tag.find(u'}')
-            if index >- 1:
+            if index > -1:
                 tag = tag[index+1:]
             if tag in contenttags:
                 wikiarticle[tag] = element.text
@@ -109,13 +115,13 @@ class XMLworker(object):
                 redir = wikiarticle.get(u'redirect', None)
                 if redir:
                     self.GenerateRedirect(wikiarticle[u'title'], redir)
-                    wikiarticle={}
+                    wikiarticle = {}
                 else:
                     if wikiarticle[u'text'] is None:
                         continue
-                    colon=wikiarticle[u'title'].find(u':')
-                    if colon>0:
-                        if not self.is_allowed_title(wikiarticle[u'title'][0:colon]):
+                    colon = wikiarticle[u'title'].find(u':')
+                    if colon > 0:
+                        if not self.translator.IsAllowedTitle(wikiarticle[u'title'][0:colon]):
                             continue
 
                     title = wikiarticle[u'title']
@@ -124,9 +130,10 @@ class XMLworker(object):
                     wikiarticle = {}
                     i += 1
                     if i%eta_every == 0:
-                        percent =  (100.0 * stream.tell()) / inputsize
-                        delta=((100-percent)*(datetime.datetime.now()-st).total_seconds())/percent
-                        status_s= "%.02f%% ETA=%s\r"%(percent, str(datetime.timedelta(seconds=delta)))
+                        percent = (100.0 * stream.tell()) / inputsize
+                        delta = ((100-percent)*(datetime.datetime.now()-st).total_seconds())/percent
+                        status_s = "%.02f%% ETA=%s\r"%(
+                            percent, str(datetime.timedelta(seconds=delta)))
                         sys.stdout.write(status_s)
                         sys.stdout.flush()
                 element.clear()
@@ -134,10 +141,9 @@ class XMLworker(object):
     def run(self, zmq_channel):
         self.zmq_channel = zmq_channel
         try:
-            self._ProcessData(zmq_channel)
+            self._ProcessData()
             self.GenerateFinished()
         except etree.XMLSyntaxError as e:
             err_msg = u'Whoops, your xml file looks bogus:\n'
             err_msg += e.error_log
             raise Exception(err_msg)
-

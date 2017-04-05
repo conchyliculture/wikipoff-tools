@@ -6,7 +6,7 @@ sys.path.append("..")
 
 import unittest
 from lib.writer.sqlite import OutputSqlite
-from lib.wikimedia.lang import wikifr
+from lib.wikimedia.languages import wikifr
 
 import locale
 locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
@@ -57,24 +57,24 @@ class TestSQLWriter(unittest.TestCase):
         o.Close()
 
 class TestWIkiFr(unittest.TestCase):
-    sfrt = wikifr.SaveFRTemplates()
+    sfrt = wikifr.WikiFRTranslator()
 
     def testLang(self):
         tests = [
-            ["lolilol ''{{lang|la|domus Dei}}''","lolilol ''domus Dei''"],
-            ["''{{lang-en|Irish Republican Army}}, IRA'' ; ''{{lang-ga|Óglaigh na hÉireann}}'') est le nom porté","''Irish Republican Army, IRA'' ; ''Óglaigh na hÉireann'') est le nom porté"],
-            ["{{lang|ko|입니다.}}","입니다."],
-            ["Ainsi, le {{lang|en|''[[Quicksort]]''}} (ou tri rapide)","Ainsi, le ''[[Quicksort]]'' (ou tri rapide)"],
-            [" ''{{lang|hy|Hayastan}}'', {{lang|hy|Հայաստան}} et ''{{lang|hy|Hayastani Hanrapetut’yun}}'', {{lang|hy|Հայաստանի Հանրապետություն}}"," ''Hayastan'', Հայաստան et ''Hayastani Hanrapetut’yun'', Հայաստանի Հանրապետություն"],
-            ["{{langue|ja|酸度}} || １.４（{{langue|ja|芳醇}}","酸度 || １.４（芳醇"],
-            ["{{langue|thaï|กรุงเทพฯ}}","กรุงเทพฯ"],
-            ["{{Lang|ar|texte=''Jabal ad Dukhan''}}","''Jabal ad Dukhan''"],
-            ["{{lang|arc-Hebr|dir=rtl|texte=ארמית}} {{lang|arc-Latn|texte=''Arāmît''}},}}","ארמית ''Arāmît'',}}"],
-            ["ce qui augmente le risque de {{lang|en|''[[Mémoire virtuelle#Swapping|swapping]]''}})","ce qui augmente le risque de ''[[Mémoire virtuelle#Swapping|swapping]]'')"]
+            [u"lolilol ''{{lang|la|domus Dei}}''", u"lolilol ''domus Dei''"],
+            [u"''{{lang-en|Irish Republican Army}}, IRA'' ; ''{{lang-ga|Óglaigh na hÉireann}}'') est le nom porté", u"''Irish Republican Army, IRA'' ; ''Óglaigh na hÉireann'') est le nom porté"],
+            [u"{{lang|ko|입니다.}}", u"입니다."],
+            [u"Ainsi, le {{lang|en|''[[Quicksort]]''}} (ou tri rapide)", u"Ainsi, le ''[[Quicksort]]'' (ou tri rapide)"],
+            [u" ''{{lang|hy|Hayastan}}'', {{lang|hy|Հայաստան}} et ''{{lang|hy|Hayastani Hanrapetut’yun}}'', {{lang|hy|Հայաստանի Հանրապետություն}}", u" ''Hayastan'', Հայաստան et ''Hayastani Hanrapetut’yun'', Հայաստանի Հանրապետություն"],
+            [u"{{langue|ja|酸度}} || １.４（{{langue|ja|芳醇}}", u"酸度 || １.４（芳醇"],
+            [u"{{langue|thaï|กรุงเทพฯ}}", u"กรุงเทพฯ"],
+            [u"{{Lang|ar|texte=''Jabal ad Dukhan''}}", u"''Jabal ad Dukhan''"],
+            [u"{{lang|arc-Hebr|dir=rtl|texte=ארמית}} {{lang|arc-Latn|texte=''Arāmît''}},}}", u"ארמית ''Arāmît'',}}"],
+            [u"ce qui augmente le risque de {{lang|en|''[[Mémoire virtuelle#Swapping|swapping]]''}})", u"ce qui augmente le risque de ''[[Mémoire virtuelle#Swapping|swapping]]'')"]
         ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testDateShort(self):
         tests=[
@@ -92,7 +92,7 @@ class TestWIkiFr(unittest.TestCase):
             [u'{{1er décembre}}', u'1<sup>er</sup> décembre'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]),t[1])
+            self.assertEqual(self.sfrt.translate(t[0]),t[1])
 
     def testDate(self):
         tests = [
@@ -106,7 +106,7 @@ class TestWIkiFr(unittest.TestCase):
             [u'Jean-François Bergier, né à [[Lausanne]], le {{date de naissance|5|décembre|1931}} et mort le {{date de décès|29|octobre|2009}}&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].', u'Jean-François Bergier, né à [[Lausanne]], le 5 décembre 1931 et mort le 29 octobre 2009&lt;ref name=&quot;swissinfo&quot;/&gt;, est un [[historien]] [[suisse]].'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testSimpleSiecle(self):
         tests=[
@@ -116,7 +116,7 @@ class TestWIkiFr(unittest.TestCase):
                 [u"{{Ier millénaire av. J.-C.}}, {{IIe millénaire av. J.-C.}}, ...",u"Ier millénaire av. J.-C., IIe millénaire av. J.-C., ..."],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testGSiecles(self):
         tests=[
@@ -127,7 +127,7 @@ class TestWIkiFr(unittest.TestCase):
                 [u"au {{sp-|XII|e|et au|XVI|e}}",u"au XIIe et au XVIe siècle"],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testTemperature(self):
         tests=[
@@ -136,7 +136,7 @@ class TestWIkiFr(unittest.TestCase):
             [u'Entre 40 et {{tmp|70|°C}}', u'Entre 40 et 70°C'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testSiecle(self):
         tests=[
@@ -152,7 +152,7 @@ class TestWIkiFr(unittest.TestCase):
 
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testUnit(self):
         tests = [
@@ -176,14 +176,14 @@ class TestWIkiFr(unittest.TestCase):
 #            [u'{{Unité|1.23456|e=9|J|2|K|3|s|-1}}', u'1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>'],
         ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testFormatNum(self):
         tests=[
                 [u"Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}",u"Elle comporte plus de 1 000 [[espèce]]s dans 90"],
                 ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testJaponais(self):
         tests=[
@@ -193,7 +193,7 @@ class TestWIkiFr(unittest.TestCase):
             ]
 
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
     def testNobr(self):
         tests=[
@@ -201,7 +201,7 @@ class TestWIkiFr(unittest.TestCase):
                 [u"{{nobr|93,13x2{{exp|30}} octets}}",u"<span class=\"nowrap\">93,13x2<sup>30</sup> octets</span>"]
             ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
 
     def testHeures(self):
@@ -213,8 +213,11 @@ class TestWIkiFr(unittest.TestCase):
                 [u"{{heure|22|55|00}}",u"22 h 55 min 00 s"],
             ]
         for t in tests:
-            self.assertEqual(self.sfrt.save(t[0]), t[1])
+            self.assertEqual(self.sfrt.translate(t[0]), t[1])
 
+    def test_allowed_title(self):
+        self.assertEqual(False, self.sfrt.IsAllowedTitle(u'Module'))
+        self.assertEqual(True, self.sfrt.IsAllowedTitle(u'Lolilol'))
 
 if __name__ == '__main__':
     unittest.main()
