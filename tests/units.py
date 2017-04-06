@@ -3,9 +3,10 @@
 
 from __future__ import unicode_literals
 
-import locale
 import sys
 sys.path.append("..")
+import codecs
+import locale
 import os.path
 import unittest
 from lib.writer.sqlite import OutputSqlite
@@ -13,6 +14,7 @@ from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia.languages import wikifr
 from lib.wikimedia.XMLworker import XMLworker
 import lib.wikimedia.wikitools as wikitools
+
 
 locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
 
@@ -297,14 +299,26 @@ class TestConverter(unittest.TestCase):
             self.GENERATED_STUFF)
         self.xmlw._ProcessData()
 
-    def test_Convert(self):
+    def test_ShortConvert(self):
+        self.maxDiff = None
+        wikicode = u'le [[lis martagon|lis des Pyrénées]], \'\'[[Calotriton asper]]\'\' ou la [[Equisetum sylvaticum|prêle des bois]]'
+        expected = u'le <a href="lis martagon">lis des Pyrénées</a>, "<a href="Calotriton asper">Calotriton asper</a>" ou la <a href="Equisetum sylvaticum">prêle des bois</a>'
+        c = WikiConverter(u'wikipedia', u'fr')
+        body = c.Convert(u'title', wikicode)[1]
+        self.assertEqual(expected, body)
+
+
+    def test_ConvertArticle(self):
+        self.maxDiff = None
         c = WikiConverter(u'wikipedia', u'fr')
         a = self.GENERATED_STUFF[-1]
-
         (title, body) = c.Convert(a[u'title'], a[u'body'])
-
-        with open('test_data/aude.html', 'w') as out:
-            out.write(body)
+        with codecs.open(os.path.join(u'test_data', u'aude.html'), u'r', encoding=u'utf-8') as html:
+            test_data = html.read()
+#            self.assertIsInstance(test_data, unicode)
+#            self.assertIsInstance(body, unicode)
+            self.assertEqual(len(test_data), len(body))
+            self.assertEqual(test_data, body)
 
 
 if __name__ == '__main__':

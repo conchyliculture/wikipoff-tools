@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import re
+import sys
 import lib.wikimedia.wikiglobals as wikiglobals
 from lib.wikimedia import wikitools
 try:
@@ -16,8 +17,8 @@ class WikiConverter(object):
     # Matches bold/italic
     BOLD_ITALIC_RE = re.compile(r"'''''([^']*?)'''''")
     BOLD_RE = re.compile(r"'''(.*?)'''")
-    ITALIC_QUOTE_RE = re.compile(r"''\"(.*?)\"''")
-    ITALIC_RE = re.compile(r"''([^']*)''")
+    ITALIC_QUOTE_RE = re.compile(r'\'\'"(.*?)"\'\'')
+    ITALIC_RE = re.compile(r'\'\'([^\']*)\'\'')
     QUOTE_QUOTE_RE = re.compile(r'""(.*?)""')
 
     # Matches space
@@ -158,7 +159,7 @@ class WikiConverter(object):
     def _Clean(self, input_text):
         if self.translator:
             text = self.translator.Translate(input_text)
-        # FIXME: templates should be expanded
+
         # Drop transclusions (template, parser functions)
         # See: http://www.mediawiki.org/wiki/Help:Templates
         text = self._DropNested(text, r'{{', r'}}')
@@ -181,7 +182,7 @@ class WikiConverter(object):
         text = WikiConverter.ITALIC_QUOTE_RE.sub(r'&quot;\1&quot;', text)
         text = WikiConverter.ITALIC_RE.sub(r'&quot;\1&quot;', text)
         text = WikiConverter.QUOTE_QUOTE_RE.sub(r'\1', text)
-        text = text.replace("'''", '').replace("''", '&quot;')
+        text = text.replace(u'\'\'\'', u'').replace(u'\'\'', u'&quot;')
 
         ################ Process HTML ###############
 
@@ -224,7 +225,8 @@ class WikiConverter(object):
                 text = text.replace(match.group(), u'%s_%d' % (placeholder, index))
                 index += 1
 
-        text = text.replace(u'<<', u'Â«').replace(u'>>', u'Â»')
+        # WTF ?
+        #text = text.replace(u'<<', u'Â«').replace(u'>>', u'Â»')
 
         #############################################
 
@@ -289,7 +291,7 @@ class WikiConverter(object):
                 # { { }
                 nest += 1
         # collect text outside partitions
-        res = ''
+        res = u''
         start = 0
         for s, e in  matches:
             res += text[start:s]
@@ -307,7 +309,7 @@ class WikiConverter(object):
             anchor = link
         anchor += trail
         if wikiglobals.keep_links:
-            return '<a href="%s">%s</a>' % (link, anchor)
+            return u'<a href="%s">%s</a>' % (link, anchor)
         else:
             return anchor
     ##
@@ -321,22 +323,27 @@ class WikiConverter(object):
             text = m.group(0)
             code = m.group(1)
             try:
-                if text[1] == "#":  # character reference
-                    if text[2] == "x":
-                        return unichr(int(code[1:], 16))
+                codepoint = None
+                if text[1] == u'#':  # character reference
+                    if text[2] == u'x':
+                        codepoint = int(code[1:], 16)
                     else:
-                        return unichr(int(code))
+                        codepoint = int(code)
                 else:               # named entity
-                    return unichr(name2codepoint[code])
+                    codepoint = name2codepoint[code]
+                if sys.version_info.major == 2:
+                    return unichr(codepoint)
+                else:
+                    return chr(codepoint)
             except:
                 return text # leave as is
 
-        return re.sub("&#?(\w+);", fixup, text)
+        return re.sub(u'&#?(\w+);', fixup, text)
 
     def _DropSpans(self, matches, text):
         """Drop from text the blocks identified in matches"""
         matches.sort()
-        res = ''
+        res = u''
         start = 0
         for s, e in  matches:
             res += text[start:s]

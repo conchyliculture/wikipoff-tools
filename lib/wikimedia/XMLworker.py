@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import codecs
 import datetime
 import getpass
 import os
@@ -9,10 +10,6 @@ import sqlite3
 import sys
 import lib.wikimedia.wikitools as wikitools
 from lxml import etree
-if sys.version_info[0] < 3:
-    reload(sys)
-    sys.setdefaultencoding(u'utf-8')
-
 
 
 class XMLworker(object):
@@ -50,7 +47,8 @@ class XMLworker(object):
         infotags = (u'sitename', u'dbname', u'base', u'generator')
 
         with open(self.xml_file, u'rb') as fd:
-            line = fd.readline().decode(u'utf-8')
+            line = fd.readline().decode('utf-8')
+            line = fd.readline().decode('utf-8')
             res = re.match(r'<mediawiki.*xml:lang="(.+)"', line)
             if not res:
                 raise Exception(
