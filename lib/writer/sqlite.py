@@ -1,3 +1,4 @@
+# encoding: utf-8
 import sqlite3
 from time import strftime
 
@@ -104,6 +105,7 @@ class OutputSqlite(object):
         if len(self.redirects_buffer) > 0:
             self.cursor.executemany(
                 u'INSERT INTO redirects VALUES (?, ?)', self.redirects_buffer)
+        self.conn.commit()
 
     def Close(self):
         self._AllCommit()

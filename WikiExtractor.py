@@ -1,20 +1,18 @@
 #!/usr/bin/python
 import sys
 #sys.path.append("./lib")
-#sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
+sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
 import base64
 import getopt
 from io import StringIO
 import os.path
 import pylzma
-#import sqlite3
 import struct
 from time import sleep
-#from threading import Thread
-#from wikimedia import XMLworker
-
 import zmq
+
 from multiprocessing import Process
+from multiprocessing import cpu_count
 
 from lib.writer.sqlite import OutputSqlite 
 from lib.wikimedia.XMLworker import XMLworker
@@ -22,15 +20,11 @@ from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia import wikitools
 
 
-# TODO argparse
+# TODO Use argparse instead
 
 class Main(object):
 
     def __init__(self, input_file, output_file):
-
-        self.halt = False
-
-        self.articles_parsed = 0
 
         self.output = OutputSqlite(output_file)
         self.xml_extractor = XMLworker(input_file)
@@ -40,35 +34,39 @@ class Main(object):
 
 
 	self.result_manager = Process(target=self.ResultManagerTask, args=())
-        sleep(1)
-
-        self.worker_processes = []
-	for wrk_num in range(8):
-	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num,)))
-        sleep(1)
 
 	self.ventilator = Process(target=self.ExtractArticlesTask, args=())
-        sleep(1)
+
+        self.worker_processes = []
+	for wrk_num in range(cpu_count()):
+	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num,)))
+       # self.worker_processes.append(Process(target=self.WorkerTask, args=(0,)))
+
 
     def ExtractArticlesTask(self):
         # Set up a channel to send work
         ventilator_send = self.context.socket(zmq.PUSH)
         ventilator_send.bind("tcp://127.0.0.1:5557")
-
-        # Give everything a second to spin up and connect
-        sleep(1)
+        print(u"I've bound 1")
+        sleep(2)
+        print(u"I'll run")
 
         self.xml_extractor.run(ventilator_send)
         print("ExtractArticlesTask finished")
+        sleep(1)
+
 
     def ResultManagerTask(self):
         # Set up a channel to receive results
         results_receiver = self.context.socket(zmq.PULL)
         results_receiver.bind("tcp://127.0.0.1:5558")
+        sleep(1)
     
         # Set up a channel to send control commands
         control_sender = self.context.socket(zmq.PUB)
         control_sender.bind("tcp://127.0.0.1:5559")
+        counter = 0
+        expected_nb_msg = -1
 
         while(True):
             message_json = results_receiver.recv_json()
@@ -79,19 +77,25 @@ class Main(object):
             elif message_json[u'type'] == 3:
                 self.output.AddArticle(title, base64.b64decode(body))
             elif message_json[u'type'] == 0:
-                break
+                expected_nb_msg = message_json[u'title']
             else:
                 raise Exception('wrong type : %d'%message_json[u'type'])
+            counter += 1
+            if counter > 5050:
+                print(u'ct : %d, expected: %d'%(counter, expected_nb_msg))
+            if expected_nb_msg == counter:
+                break
 
         print(u'Setting Metadata')
-        self.output.set_metadata(self.xml_extractor.get_infos())
+        self.output.SetMetadata(self.xml_extractor.db_metadata)
         print(u'Building Indexes')
         self.output.Close()
         control_sender.send_string(u'finished')
-        self.halt = True
         print(u'Result Manager has finished')
 
     def WorkerTask(self, wrk_num):
+        sleep(1)
+        print("i connect %d"%wrk_num)
         work_receiver = self.context.socket(zmq.PULL)
         work_receiver.connect("tcp://127.0.0.1:5557")
 
@@ -108,10 +112,14 @@ class Main(object):
         poller.register(work_receiver, zmq.POLLIN)
         poller.register(control_receiver, zmq.POLLIN)
 
+        cnt = 0
         # Loop and accept messages from both channels, acting accordingly
-        while not self.halt:
+        while True:
+            if cnt > 5000:
+                print "wcnt%d = %d"%(wrk_num, cnt)
             socks = dict(poller.poll())
             if socks.get(work_receiver) == zmq.POLLIN:
+                cnt+=1
                 message_json = work_receiver.recv_json()
                 if message_json[u'type'] == 2:
                     title, body = self.wikiconverter.Convert(
@@ -127,16 +135,25 @@ class Main(object):
             elif socks.get(control_receiver) == zmq.POLLIN:
                 ctrl_message = control_receiver.recv()
                 if ctrl_message == u'finished':
+                    print(u'Worker-%d asked to finish'%wrk_num)
                     break
-        print(u'Worker-%d has finishaide'%wrk_num)
 
     def run(self):
+        self.running = True
+
 	for worker in self.worker_processes:
             worker.start()
 
-	self.result_manager.start()
-
 	self.ventilator.start()
+        sleep(2)
+	self.result_manager.start()
+        sleep(1)
+
+
+
+
+        self.result_manager.join()
+        self.running = False
 
 def show_usage():
     print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml
@@ -187,7 +204,6 @@ def main():
 
     m = Main(input_file, output_file)
     m.run()
-
 
     print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
 

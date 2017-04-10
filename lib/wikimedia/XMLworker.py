@@ -17,9 +17,10 @@ class XMLworker(object):
         self._languagedb = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), u'languages.sqlite')
         self.xml_file = xml_file
-        self.infos = self._GetInfos()
+        self.db_metadata = self._GetInfos()
         self.wikitype = self._GuessType()
         self.zmq_channel = None
+        self.counter = 0
 
         if not os.path.isfile(self._languagedb):
             raise Exception(u'{0:s} doesn\'t exists. Please create it.'.format(self._languagedb))
@@ -28,16 +29,18 @@ class XMLworker(object):
         self.zmq_channel.send_json({u'type': msgtype, u'title': title, u'body': body})
 
     def GenerateRedirect(self, from_, to_):
+        self.counter += 1
         self.GenerateMessage(from_, to_, 1)
 
     def GenerateArticle(self, title, body):
+        self.counter += 1
         self.GenerateMessage(title, body, 2)
 
-    def GenerateFinished(self):
-        self.GenerateMessage(u'', u'', 0)
+    def GenerateFinished(self, expected):
+        self.GenerateMessage(expected, u'', 0)
 
     def _GuessType(self):
-        res = self.infos[u'base'].find(u'wikipedia.org/wiki')
+        res = self.db_metadata[u'base'].find(u'wikipedia.org/wiki')
         if res:
             return u'wikipedia'
         return None
@@ -47,7 +50,6 @@ class XMLworker(object):
         infotags = (u'sitename', u'dbname', u'base', u'generator')
 
         with open(self.xml_file, u'rb') as fd:
-            line = fd.readline().decode('utf-8')
             line = fd.readline().decode('utf-8')
             res = re.match(r'<mediawiki.*xml:lang="(.+)"', line)
             if not res:
@@ -117,8 +119,8 @@ class XMLworker(object):
                         if colon > 0:
                             header_title = title[0:colon]
                             if not wikitools.IsAllowedTitle(
-                                header_title, wikitype=self.wikitype,
-                                lang=self.infos[u'lang']):
+                                header_title, wikitype = self.wikitype,
+                                lang = self.db_metadata[u'lang']):
                                 continue
 
                         body = wikiarticle[u'text']
@@ -138,7 +140,7 @@ class XMLworker(object):
         self.zmq_channel = zmq_channel
         try:
             self._ProcessData()
-            self.GenerateFinished()
+            self.GenerateFinished(self.counter)
         except etree.XMLSyntaxError as e:
             err_msg = u'Whoops, your xml file looks bogus:\n'
             err_msg += e.error_log
