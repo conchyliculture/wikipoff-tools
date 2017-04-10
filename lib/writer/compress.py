@@ -8,7 +8,11 @@ sys.path.append(
         u'..', u'python{0:d}.{1:d}'.format(
             sys.version_info.major, sys.version_info.minor),
         u'site-packages'))
-import pylzma
+try:
+    import pylzma
+except ImportError as e:
+    print(u'Try to run make_pylzma.sh')
+    raise e
 import struct
 from io import BytesIO
 
