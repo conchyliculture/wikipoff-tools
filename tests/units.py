@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 
 import os.path
 import sys
-sys.path.append("..")
+sys.path.append(os.path.join(os.path.dirname(__file__), u'..'))
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
@@ -275,7 +275,9 @@ class TestXMLworker(unittest.TestCase):
     def setUp(self):
         self.GENERATED_STUFF = []
         self.xmlw = TestXMLworkerClass(
-            os.path.join(u'test_data', u'frwiki-latest-pages-articles.xml.short'),
+            os.path.join(
+                os.path.dirname(__file__), u'test_data',
+                u'frwiki-latest-pages-articles.xml.short'),
             self.GENERATED_STUFF)
 
         self.xmlw._ProcessData()
@@ -345,7 +347,9 @@ class TestConverterFR(unittest.TestCase):
     def setUp(self):
         self.GENERATED_STUFF = []
         self.xmlw = TestXMLworkerClass(
-            os.path.join(u'test_data', u'frwiki-latest-pages-articles.xml.short'),
+            os.path.join(
+                os.path.dirname(__file__), u'test_data',
+                u'frwiki-latest-pages-articles.xml.short'),
             self.GENERATED_STUFF)
         self.xmlw._ProcessData()
 
@@ -367,9 +371,9 @@ class TestConverterFR(unittest.TestCase):
         a = self.GENERATED_STUFF[-1]
         (_, body) = c.Convert(a[u'title'], a[u'body'])
         body = body.strip()
-        with open(u'/tmp/lolilol', u'wb') as w:
-            w.write(body.encode(u'utf-8'))
-        expected_html_path = os.path.join(u'test_data', u'aude.html')
+        # with open(u'/tmp/lolilol', u'wb') as w:
+        #w.write(body.encode(u'utf-8'))
+        expected_html_path = os.path.join(os.path.dirname(__file__), u'test_data', u'aude.html')
         with codecs.open(expected_html_path, u'r', encoding=u'utf-8') as html:
             test_data = html.read().strip()
             self.assertEqual(len(test_data), len(body))
