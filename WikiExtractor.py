@@ -1,6 +1,6 @@
 #!/usr/bin/python
+import argparse
 import base64
-import getopt
 import os.path
 import sys
 from time import sleep
@@ -14,8 +14,6 @@ from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
 
-
-# TODO Use argparse instead
 
 class WikiExtractor(object):
 
@@ -108,54 +106,25 @@ class WikiExtractor(object):
         self.result_manager.join()
 
 
-def show_usage():
-    print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml
-Converts a wikipedia XML dump file into sqlite databases to be used in WikipOff
-
-Options:
-        -x, --xml       Input xml dump
-        -d, --db        Output database file (default : 'wiki.sqlite')
-/bin/bash: q : commande introuvable
-        -t, --type      Wikimedia type (default: 'wikipedia')
-""")
-
-
 def main():
-    try:
-        long_opts = [u'help', u'db=', u'xml=', u'type=']
-        opts, _ = getopt.gnu_getopt(sys.argv[1:], 'hx:d:t:', long_opts)
-    except getopt.GetoptError:
-        show_usage()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(u'xml_file', help=u'the input xml wikimedia dump')
+    parser.add_argument(u'output_file', help=u'the destination file')
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.xml_file):
+        print(u'{0:s} doesn\'t exist.'.format(args.xml_file))
         sys.exit(1)
 
-    output_file = None
-
-    for opt, arg in opts:
-        if opt in (u'-h', u'--help'):
-            show_usage()
-            sys.exit()
-        elif opt in (u'-d', u'--db'):
-            output_file = arg
-        elif opt in (u'-x', u'--xml'):
-            input_file = arg
-
-    if not u'input_file' in locals():
-        print(u'Please give me a wiki xml dump with -x or --xml')
-        sys.exit()
-
-    if not output_file:
-        print(u'I need a filename for the destination sqlite file')
+    if os.path.exists(args.output_file):
+        print(u'{0:s} already exists. Won\'t overwrite it.'.format(args.output_file))
         sys.exit(1)
 
-    if os.path.isfile(output_file):
-        print(u'%s already exists. Won\'t overwrite it.'%output_file)
-        sys.exit(1)
-
-    wikiextractor = WikiExtractor(input_file, output_file)
+    wikiextractor = WikiExtractor(args.xml_file, args.output_file)
     print(u'Converting xml dump {0:s} to database {1:s}. This may take eons...'.format(
-        input_file, output_file))
+        args.xml_file, args.output_file))
     wikiextractor.run()
-
 
 if __name__ == '__main__':
     main()
