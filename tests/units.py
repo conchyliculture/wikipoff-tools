@@ -3,21 +3,24 @@
 
 from __future__ import unicode_literals
 
+import os.path
 import sys
 sys.path.append("..")
-sys.path.append(u'../lib/python{0:d}.{1:d}/site-packages/'.format(
-    sys.version_info.major, sys.version_info.minor))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(__file__),
+        u'..', u'lib', u'python{0:d}.{1:d}'.format(
+            sys.version_info.major, sys.version_info.minor),
+        u'site-packages'))
 from binascii import unhexlify
 import codecs
 import locale
-import os.path
 import unittest
 from lib.writer.compress import LzmaCompress
 from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia.languages import wikifr
 from lib.wikimedia.XMLworker import XMLworker
-import lib.wikimedia.wikitools as wikitools
 
 locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
 
@@ -28,7 +31,8 @@ class TestCompression(unittest.TestCase):
         data = u'['+u'oléléolala'*12+u']'
 
         compressed = LzmaCompress(data)
-        expected_compressed = unhexlify(u'5d000080009200000000000000002d9bc98c53caed25d8aa1da643a8fa430000')
+        expected_compressed = unhexlify(
+            u'5d000080009200000000000000002d9bc98c53caed25d8aa1da643a8fa430000')
         self.assertEqual(expected_compressed, compressed)
 
 class TestSQLWriter(unittest.TestCase):
@@ -60,7 +64,11 @@ class TestSQLWriter(unittest.TestCase):
 
     def test_AddArticle(self):
         o = OutputSqlite(None)
-        test_article = (u'This title &  à_è>Ýü', u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}")
+        test_article = (
+            u'This title &  à_è>Ýü',
+            (u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|"
+             u"''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}")
+            )
         o.AddArticle(*test_article)
         o._AllCommit()
 
@@ -69,7 +77,10 @@ class TestSQLWriter(unittest.TestCase):
 
     def test_Close(self):
         o = OutputSqlite(None)
-        test_article = (u'This title &  à_è>Ýü', u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}")
+        test_article = (
+            u'This title &  à_è>Ýü',
+            (u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|"
+             u"''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}"))
         o.AddArticle(*test_article)
         test_redirect = (u'From', u'To')
         o.AddRedirect(*test_redirect)
@@ -82,15 +93,20 @@ class TestWIkiFr(unittest.TestCase):
     def testLang(self):
         tests = [
             [u"lolilol ''{{lang|la|domus Dei}}''", u"lolilol ''domus Dei''"],
-            [u"''{{lang-en|Irish Republican Army}}, IRA'' ; ''{{lang-ga|Óglaigh na hÉireann}}'') est le nom porté", u"''Irish Republican Army, IRA'' ; ''Óglaigh na hÉireann'') est le nom porté"],
+            [u"''{{lang-en|Irish Republican Army}}, IRA'' ; ''{{lang-ga|Óglaigh na hÉireann}}'') est le nom porté",
+             u"''Irish Republican Army, IRA'' ; ''Óglaigh na hÉireann'') est le nom porté"],
             [u"{{lang|ko|입니다.}}", u"입니다."],
-            [u"Ainsi, le {{lang|en|''[[Quicksort]]''}} (ou tri rapide)", u"Ainsi, le ''[[Quicksort]]'' (ou tri rapide)"],
-            [u" ''{{lang|hy|Hayastan}}'', {{lang|hy|Հայաստան}} et ''{{lang|hy|Hayastani Hanrapetut’yun}}'', {{lang|hy|Հայաստանի Հանրապետություն}}", u" ''Hayastan'', Հայաստան et ''Hayastani Hanrapetut’yun'', Հայաստանի Հանրապետություն"],
+            [u"Ainsi, le {{lang|en|''[[Quicksort]]''}} (ou tri rapide)",
+             u"Ainsi, le ''[[Quicksort]]'' (ou tri rapide)"],
+            [u" ''{{lang|hy|Hayastan}}'', {{lang|hy|Հայաստան}} et ''{{lang|hy|Hayastani Hanrapetut’yun}}'', {{lang|hy|Հայաստանի Հանրապետություն}}",
+             u" ''Hayastan'', Հայաստան et ''Hayastani Hanrapetut’yun'', Հայաստանի Հանրապետություն"],
             [u"{{langue|ja|酸度}} || １.４（{{langue|ja|芳醇}}", u"酸度 || １.４（芳醇"],
             [u"{{langue|thaï|กรุงเทพฯ}}", u"กรุงเทพฯ"],
             [u"{{Lang|ar|texte=''Jabal ad Dukhan''}}", u"''Jabal ad Dukhan''"],
-            [u"{{lang|arc-Hebr|dir=rtl|texte=ארמית}} {{lang|arc-Latn|texte=''Arāmît''}},}}", u"ארמית ''Arāmît'',}}"],
-            [u"ce qui augmente le risque de {{lang|en|''[[Mémoire virtuelle#Swapping|swapping]]''}})", u"ce qui augmente le risque de ''[[Mémoire virtuelle#Swapping|swapping]]'')"]
+            [u"{{lang|arc-Hebr|dir=rtl|texte=ארמית}} {{lang|arc-Latn|texte=''Arāmît''}},}}",
+             u"ארמית ''Arāmît'',}}"],
+            [u"ce qui augmente le risque de {{lang|en|''[[Mémoire virtuelle#Swapping|swapping]]''}})",
+             u"ce qui augmente le risque de ''[[Mémoire virtuelle#Swapping|swapping]]'')"]
         ]
 
         for t in tests:
@@ -192,23 +208,27 @@ class TestWIkiFr(unittest.TestCase):
             [u'{{Unité|10000|J|2|K|3|s|-1}}', u'10 000 J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>'],
             [u'{{Unité|10000|J||kg||m|-2}}', u'10 000 J⋅kg⋅m<sup>-2</sup>'],
             [u'{{Unité|-40.234|°C}}', u'-40.234 °C'],
-#            [u'{{Unité|1.23456|e=9|J|2|K|3|s|-1}}', u'1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>'],
+            # [u'{{Unité|1.23456|e=9|J|2|K|3|s|-1}}', u'1.23456×10<sup>9</sup> J<sup>2</sup>⋅K<sup>3</sup>⋅s<sup>-1</sup>'],
         ]
         for t in tests:
             self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testFormatNum(self):
         tests = [
-            [u'Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}', u'Elle comporte plus de 1 000 [[espèce]]s dans 90'],
+            [u'Elle comporte plus de {{formatnum:1000}} [[espèce]]s dans {{formatnum:90}}',
+             u'Elle comporte plus de 1 000 [[espèce]]s dans 90'],
         ]
         for t in tests:
             self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def testJaponais(self):
         tests = [
-            [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}", u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
-            [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}", u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
-            [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un", u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
+            [u"{{Japonais|'''Happa-tai'''|はっぱ隊||Brigade des feuilles}}",
+             u"'''Happa-tai''' (はっぱ隊, , Brigade des feuilles)"],
+            [u"{{Japonais|'''Lolicon'''|ロリータ・コンプレックス|''rorīta konpurekkusu''}}, ou {{japonais|'''Rorikon'''|ロリコン}}",
+             u"'''Lolicon''' (ロリータ・コンプレックス, ''rorīta konpurekkusu''), ou '''Rorikon''' (ロリコン)"],
+            [u"Le {{japonais|'''Tōdai-ji'''|東大寺||littéralement « Grand temple de l’est »}}, de son nom complet {{japonais|Kegon-shū daihonzan Tōdai-ji|華厳宗大本山東大寺}}, est un",
+             u"Le '''Tōdai-ji''' (東大寺, , littéralement « Grand temple de l’est »), de son nom complet Kegon-shū daihonzan Tōdai-ji (華厳宗大本山東大寺), est un"]
         ]
 
         for t in tests:
@@ -216,8 +236,10 @@ class TestWIkiFr(unittest.TestCase):
 
     def testNobr(self):
         tests = [
-            [u'{{nobr|[[préfixe binaire|préfixes binaires]]}}', u'<span class="nowrap">[[préfixe binaire|préfixes binaires]]</span>'],
-            [u'{{nobr|93,13x2{{exp|30}} octets}}', u'<span class="nowrap">93,13x2<sup>30</sup> octets</span>']
+            [u'{{nobr|[[préfixe binaire|préfixes binaires]]}}',
+             u'<span class="nowrap">[[préfixe binaire|préfixes binaires]]</span>'],
+            [u'{{nobr|93,13x2{{exp|30}} octets}}',
+             u'<span class="nowrap">93,13x2<sup>30</sup> octets</span>']
         ]
 
         for t in tests:
@@ -236,10 +258,11 @@ class TestWIkiFr(unittest.TestCase):
             self.assertEqual(self.sfrt.Translate(t[0]), t[1])
 
     def test_allowed_title(self):
-        self.assertEqual(False, wikitools.IsAllowedTitle(u'Modèle', wikitype=u'wikipedia', lang=u'fr'))
-        self.assertEqual(True, wikitools.IsAllowedTitle(u'Lolilol', wikitype=u'wikipedia', lang=u'fr'))
+        self.assertEqual(False, self.sfrt.IsAllowedTitle(u'Modèle'))
+        self.assertEqual(True, self.sfrt.IsAllowedTitle(u'Lolilol'))
 
 class TestXMLworkerClass(XMLworker):
+
     def __init__(self, input_file, output_array):
         super(TestXMLworkerClass, self).__init__(input_file)
         self.GENERATED_STUFF = output_array
@@ -290,7 +313,8 @@ class TestXMLworker(unittest.TestCase):
         self.assertEqual(
             u'Aude (département)', generated_article[u'title'])
         self.assertEqual(
-            u'{{Voir homonymes|Aude}}\n{{Infobox Département de France', generated_article[u'body'][0:55])
+            u'{{Voir homonymes|Aude}}\n{{Infobox Département de France',
+            generated_article[u'body'][0:55])
         self.assertEqual(17357, len(generated_article[u'body']))
         self.assertEqual(2, generated_article[u'type'])
 
@@ -304,7 +328,20 @@ class TestXMLworker(unittest.TestCase):
         generated_article_colon_notallowed = self.GENERATED_STUFF[-3]
         self.assertEqual(u'Aube (département)', generated_article_colon_notallowed[u'title'])
 
-class TestConverter(unittest.TestCase):
+
+class TestConverterNoLang(unittest.TestCase):
+
+    def test_thumbstuff(self):
+        self.maxDiff = None
+        wikicode = u'[[Figure:Sahara satellite hires.jpg|thumb|right|300px|Foto dal satelit]] Il \'\'\'Sahara\'\'\' ([[Lenghe arabe|arap]] صحراء {{audio|ar-Sahara.ogg|pronuncie}}, \'\'desert\'\') al è un [[desert]] di gjenar tropicâl inte [[Afriche]] dal nord. Al è il secont desert plui grant dal mont (daspò la [[Antartide]]), cuntune superficie di 9.000.000 km².'
+        expected = u' Il <b>Sahara</b> (<a href="Lenghe arabe">arap</a> صحراء , <i>desert</i> ) al è un <a href="desert">desert</a> di gjenar tropicâl inte <a href="Afriche">Afriche</a> dal nord. Al è il secont desert plui grant dal mont (daspò la <a href="Antartide">Antartide</a>), cuntune superficie di 9.000.000 km².'
+        c = WikiConverter()
+        body = c.Convert(u'title', wikicode)[1]
+        self.assertEqual(expected, body)
+
+
+class TestConverterFR(unittest.TestCase):
+
     def setUp(self):
         self.GENERATED_STUFF = []
         self.xmlw = TestXMLworkerClass(
@@ -314,23 +351,29 @@ class TestConverter(unittest.TestCase):
 
     def test_ShortConvert(self):
         self.maxDiff = None
-        wikicode = u'le [[lis martagon|lis des Pyrénées]], \'\'[[Calotriton asper]]\'\' ou la [[Equisetum sylvaticum|prêle des bois]]'
-        expected = u'le <a href="lis martagon">lis des Pyrénées</a>, "<a href="Calotriton asper">Calotriton asper</a>" ou la <a href="Equisetum sylvaticum">prêle des bois</a>'
+        wikicode = (
+            u'le [[lis martagon|lis des Pyrénées]], \'\'[[Calotriton asper]]\'\''
+            u'ou la [[Equisetum sylvaticum|prêle des bois]]')
+        expected = (
+            u'le <a href="lis martagon">lis des Pyrénées</a>, <i><a href="Calotriton asper">'
+            u'Calotriton asper</a></i> ou la <a href="Equisetum sylvaticum">prêle des bois</a>')
         c = WikiConverter(u'wikipedia', u'fr')
         body = c.Convert(u'title', wikicode)[1]
         self.assertEqual(expected, body)
-
 
     def test_ConvertArticle(self):
         self.maxDiff = None
         c = WikiConverter(u'wikipedia', u'fr')
         a = self.GENERATED_STUFF[-1]
         (_, body) = c.Convert(a[u'title'], a[u'body'])
-        with codecs.open(os.path.join(u'test_data', u'aude.html'), u'r', encoding=u'utf-8') as html:
-            test_data = html.read()
+        body = body.strip()
+        with open(u'/tmp/lolilol', u'wb') as w:
+            w.write(body.encode(u'utf-8'))
+        expected_html_path = os.path.join(u'test_data', u'aude.html')
+        with codecs.open(expected_html_path, u'r', encoding=u'utf-8') as html:
+            test_data = html.read().strip()
             self.assertEqual(len(test_data), len(body))
             self.assertEqual(test_data, body)
-
 
 
 if __name__ == '__main__':

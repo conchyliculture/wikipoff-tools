@@ -43,7 +43,7 @@ class WikiConverter(object):
     SECTION_RE = re.compile(r'(==+)\s*(.*?)\s*\1')
 
     def __init__(self, wikitype=None, wikilang=None):
-        self.translator = wikitools.GetLanguageModule(wikitype, wikilang)()
+        self.translator = wikitools.GetLanguageModule(wikitype, wikilang)
 
         # Match selfClosing HTML tags
         self.selfClosing_tag_patterns = []
@@ -180,7 +180,7 @@ class WikiConverter(object):
         text = WikiConverter.BOLD_ITALIC_RE.sub(r'<i>\1</i>', text)
         text = WikiConverter.BOLD_RE.sub(r'<b>\1</b>', text)
         text = WikiConverter.ITALIC_QUOTE_RE.sub(r'&quot;\1&quot;', text)
-        text = WikiConverter.ITALIC_RE.sub(r'&quot;\1&quot;', text)
+        text = WikiConverter.ITALIC_RE.sub(r'<i>\1</i> ', text)
         text = WikiConverter.QUOTE_QUOTE_RE.sub(r'\1', text)
         text = text.replace(u'\'\'\'', u'').replace(u'\'\'', u'&quot;')
 
@@ -232,7 +232,7 @@ class WikiConverter(object):
 
         # Drop preformatted
         # This can't be done before since it may remove tags
-        text = WikiConverter.PREFORMATED_RE.sub(u'', text)
+#        text = WikiConverter.PREFORMATED_RE.sub(u'', text)
 
         # Cleanup text
         text = text.replace(u'\t', u' ')
@@ -302,7 +302,12 @@ class WikiConverter(object):
     # Function applied to wikiLinks
     def _MakeAnchorTag(self, match):
         link = match.group(1)
-        #colon = link.find(':')
+        colon = link.find(':')
+        # TODO parameter this shit
+        if colon > 0:
+            link_class = link[0:colon]
+            if not self.translator.IsAllowedTitle(link_class):
+                return u''
         trail = match.group(3)
         anchor = match.group(2)
         if not anchor:

@@ -2,8 +2,7 @@
 import sqlite3
 from time import strftime
 
-version = u'2.5'
-dbversion = u'0.0.0.1'
+VERSION = u'2.5'
 
 class OutputSqlite(object):
 
@@ -46,7 +45,7 @@ class OutputSqlite(object):
 
         self._SetLang(infos[u'lang-code'], infos[u'lang-local'], infos[u'lang-english'])
         self._SetGenDate(strftime(u'%Y-%m-%d %H:%M:%S'))
-        self._SetVersion(version)
+        self._SetVersion(VERSION)
         self._SetSource(infos[u'source'])
         self._SetAuthor(infos[u'author'])
         self._SetType(infos[u'type'])

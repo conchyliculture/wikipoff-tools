@@ -1,1 +1,1 @@
-__all__ = [u'wikifr', u'wikien']
+__all__ = ['wikifr', 'wikien']

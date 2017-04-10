@@ -1,23 +1,4 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
-#
-# Copyright 2014 "Renzokuken" (pseudonym, first committer of WikipOff project) at
-# https://github.com/conchyliculture/wikipoff
-#
-# This file is part of WikipOff.
-#
-#     WikipOff is free software: you can redistribute it and/or modify
-#     it under the terms of the GNU General Public License as published by
-#     the Free Software Foundation, either version 3 of the License, or
-#     (at your option) any later version.
-#
-#     WikipOff is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#     GNU General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public License
-#     along with WikipOff.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
@@ -30,7 +11,9 @@ class WikiFRTranslator(object):
     def IsAllowedTitle(title):
         return title not in [
             u'Modèle', u'Catégorie', u'Portail', u'Fichier', u'Wikipédia',
-            u'Projet', u'Référence', u'MediaWiki', u'Aide', u'Module']
+            u'Projet', u'Référence', u'MediaWiki', u'Aide', u'Module',
+            u'File']
+
     def __init__(self):
         # Templates that allow inclusion of }} in parameters will fail....
         # We should use the dropNested thing  maybe?
@@ -52,15 +35,15 @@ class WikiFRTranslator(object):
         self.fr_saveTemperatureTemplatesRE = re.compile(
             r'{{tmp\|([^\|]+)\|°C}}', re.IGNORECASE|re.UNICODE)
         self.fr_saveRefIncTemplatesRE = re.compile(
-            r'{{Référence [^|}]+\|([^|]+)}}', re.IGNORECASE) # incomplete/insuff/a confirmer/nécessaire
+            r'{{Référence [^|}]+\|([^|]+)}}', re.IGNORECASE)
         self.fr_saveNumeroTemplatesRE = re.compile(
             r'{{(numéro|n°|nº)}}', re.IGNORECASE)
         self.fr_saveCitationTemplatesRE = re.compile(
             r'{{citation ?(?:bloc|nécessaire)?\|([^}]+)}}', re.IGNORECASE)
         self.fr_savePassageEvasifTemplatesRE = re.compile(
             r'{{passage évasif\|([^}]+)}}', re.IGNORECASE)
-# not in my wikipedia
-#self.fr_savePassNonNeutreTemplatesRE = re.compile(r'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
+        # not in my wikipedia
+        #self.fr_savePassNonNeutreTemplatesRE = re.compile(r'{{(?:passage non neutre|non neutre|nonneutre)\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_saveDouteuxTemplatesRE = re.compile(
             r'{{douteux\|([^\|]+)(?:\|[^}]+)?}}', re.IGNORECASE)
         self.fr_savePasspromotionnelTemplatesRE = re.compile(

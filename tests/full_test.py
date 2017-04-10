@@ -5,15 +5,18 @@ from __future__ import unicode_literals
 
 import os
 import sys
-sys.path.append(u'..')
-sys.path.append(u'../lib/python{0:d}.{1:d}/site-packages/'.format(
-    sys.version_info.major, sys.version_info.minor))
-from lib.writer.sqlite import OutputSqlite
-import pylzma
+sys.path.append(os.path.join(os.path.dirname(__file__), u'..'))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(__file__),
+        u'..', u'lib', u'python{0:d}.{1:d}'.format(
+            sys.version_info.major, sys.version_info.minor),
+        u'site-packages'))
 import sqlite3
 import subprocess
-from time import sleep
 import unittest
+
+from lib.writer.sqlite import OutputSqlite
 from WikiExtractor import WikiExtractor
 
 
@@ -59,7 +62,7 @@ class ConvertWiki(unittest.TestCase):
 
         cursor.execute(u'SELECT count(*) from articles')
         articles_count = cursor.fetchone()
-        self.assertEqual(4421, articles_count[0])
+        self.assertEqual(4240, articles_count[0])
 
         cursor.execute(u'SELECT count(*) from redirects')
         redirects_count = cursor.fetchone()

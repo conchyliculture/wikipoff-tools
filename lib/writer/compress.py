@@ -1,5 +1,13 @@
 # encoding: utf-8
 
+import os
+import sys
+sys.path.append(
+    os.path.join(
+        os.path.dirname(__file__),
+        u'..', u'python{0:d}.{1:d}'.format(
+            sys.version_info.major, sys.version_info.minor),
+        u'site-packages'))
 import pylzma
 import struct
 from io import BytesIO
@@ -14,4 +22,3 @@ def LzmaCompress(data):
 
 def LzmaDecompress(data):
     return pylzma.decompress(data)
-

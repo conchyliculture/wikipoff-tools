@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import codecs
-import datetime
 import getpass
 import os
 import re
@@ -24,6 +22,8 @@ class XMLworker(object):
 
         if not os.path.isfile(self._languagedb):
             raise Exception(u'{0:s} doesn\'t exists. Please create it.'.format(self._languagedb))
+
+        self.language_helper = wikitools.GetLanguageModule(self.wikitype, self.db_metadata[u'lang'])
 
     def GenerateMessage(self, title, body, msgtype):
         self.out_queue.put({u'type': msgtype, u'title': title, u'body': body})
@@ -92,7 +92,6 @@ class XMLworker(object):
         wikiarticle = {}
         i = 0
         eta_every = 300
-        st = datetime.datetime.now()
 
         inputsize = os.path.getsize(self.xml_file)
 
@@ -118,9 +117,7 @@ class XMLworker(object):
                         colon = title.find(u':')
                         if colon > 0:
                             header_title = title[0:colon]
-                            if not wikitools.IsAllowedTitle(
-                                header_title, wikitype = self.wikitype,
-                                lang = self.db_metadata[u'lang']):
+                            if not self.language_helper.IsAllowedTitle(header_title):
                                 continue
 
                         body = wikiarticle[u'text']
