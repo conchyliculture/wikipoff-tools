@@ -8,13 +8,12 @@ from io import StringIO
 import os.path
 import pylzma
 import struct
-from time import sleep
-import zmq
 
 from multiprocessing import Process
 from multiprocessing import cpu_count
+from multiprocessing import Queue
 
-from lib.writer.sqlite import OutputSqlite 
+from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia import wikitools
@@ -24,52 +23,35 @@ from lib.wikimedia import wikitools
 
 class Main(object):
 
+    FINIESHED_MSG = u'finished'
+
     def __init__(self, input_file, output_file):
 
         self.output = OutputSqlite(output_file)
         self.xml_extractor = XMLworker(input_file)
-        self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr') 
+        self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr')
 
-        self.context = zmq.Context()
+        self.extraction_queue = Queue()
+        self.writing_queue = Queue()
 
+        nb_workers = cpu_count()
 
-	self.result_manager = Process(target=self.ResultManagerTask, args=())
-
-	self.ventilator = Process(target=self.ExtractArticlesTask, args=())
-
+	self.result_manager = Process(target=self.ResultManagerTask, args=(self.writing_queue, self.extraction_queue, nb_workers))
+	self.ventilator = Process(target=self.ExtractArticlesTask, args=(self.extraction_queue,))
         self.worker_processes = []
-	for wrk_num in range(cpu_count()):
-	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num,)))
-       # self.worker_processes.append(Process(target=self.WorkerTask, args=(0,)))
+	for wrk_num in range(nb_workers):
+	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num, self.extraction_queue, self.writing_queue)))
 
-
-    def ExtractArticlesTask(self):
-        # Set up a channel to send work
-        ventilator_send = self.context.socket(zmq.PUSH)
-        ventilator_send.bind("tcp://127.0.0.1:5557")
-        print(u"I've bound 1")
-        sleep(2)
-        print(u"I'll run")
-
-        self.xml_extractor.run(ventilator_send)
+    def ExtractArticlesTask(self, out_queue):
+        self.xml_extractor.run(out_queue)
         print("ExtractArticlesTask finished")
-        sleep(1)
 
-
-    def ResultManagerTask(self):
-        # Set up a channel to receive results
-        results_receiver = self.context.socket(zmq.PULL)
-        results_receiver.bind("tcp://127.0.0.1:5558")
-        sleep(1)
-    
-        # Set up a channel to send control commands
-        control_sender = self.context.socket(zmq.PUB)
-        control_sender.bind("tcp://127.0.0.1:5559")
+    def ResultManagerTask(self, in_queue, ctrl_queue, nb_workers):
         counter = 0
         expected_nb_msg = -1
 
         while(True):
-            message_json = results_receiver.recv_json()
+            message_json = in_queue.get()
             title = message_json[u'title']
             body = message_json[u'body']
             if message_json[u'type'] == 1:
@@ -81,8 +63,6 @@ class Main(object):
             else:
                 raise Exception('wrong type : %d'%message_json[u'type'])
             counter += 1
-            if counter > 5050:
-                print(u'ct : %d, expected: %d'%(counter, expected_nb_msg))
             if expected_nb_msg == counter:
                 break
 
@@ -90,53 +70,26 @@ class Main(object):
         self.output.SetMetadata(self.xml_extractor.db_metadata)
         print(u'Building Indexes')
         self.output.Close()
-        control_sender.send_string(u'finished')
+        for i in range(nb_workers):
+            ctrl_queue.put(u'finished')
         print(u'Result Manager has finished')
 
-    def WorkerTask(self, wrk_num):
-        sleep(1)
-        print("i connect %d"%wrk_num)
-        work_receiver = self.context.socket(zmq.PULL)
-        work_receiver.connect("tcp://127.0.0.1:5557")
-
-        control_receiver = self.context.socket(zmq.SUB)
-        control_receiver.connect("tcp://127.0.0.1:5559")
-        control_receiver.setsockopt_string(zmq.SUBSCRIBE, u'')
-    
-        # Set up a channel to send result of work to the results reporter
-        results_sender = self.context.socket(zmq.PUSH)
-        results_sender.connect("tcp://127.0.0.1:5558")
-    
-        # Set up a poller to multiplex the work receiver and control receiver channels
-        poller = zmq.Poller()
-        poller.register(work_receiver, zmq.POLLIN)
-        poller.register(control_receiver, zmq.POLLIN)
-
-        cnt = 0
-        # Loop and accept messages from both channels, acting accordingly
+    def WorkerTask(self, wrk_num, in_queue, out_queue):
         while True:
-            if cnt > 5000:
-                print "wcnt%d = %d"%(wrk_num, cnt)
-            socks = dict(poller.poll())
-            if socks.get(work_receiver) == zmq.POLLIN:
-                cnt+=1
-                message_json = work_receiver.recv_json()
-                if message_json[u'type'] == 2:
-                    title, body = self.wikiconverter.Convert(
-                            message_json[u'title'], message_json[u'body'])
-                    c = pylzma.compressfile(StringIO(body),dictionary=23)
-                    result = c.read(5)
-                    result+=struct.pack('<Q', len(body))
-                    body = result+c.read()
-                    message_json[u'type'] = 3
-                    message_json[u'body'] = base64.b64encode(body)
-                        
-                results_sender.send_json(message_json)
-            elif socks.get(control_receiver) == zmq.POLLIN:
-                ctrl_message = control_receiver.recv()
-                if ctrl_message == u'finished':
-                    print(u'Worker-%d asked to finish'%wrk_num)
-                    break
+            message_json = in_queue.get()
+            if message_json == u'finished':
+                break
+            if message_json[u'type'] == 2:
+                title, body = self.wikiconverter.Convert(
+                        message_json[u'title'], message_json[u'body'])
+                c = pylzma.compressfile(StringIO(body), dictionary=23)
+                result = c.read(5)
+                result+=struct.pack('<Q', len(body))
+                body = result+c.read()
+                message_json[u'type'] = 3
+                message_json[u'body'] = base64.b64encode(body)
+
+            out_queue.put(message_json)
 
     def run(self):
         self.running = True
@@ -145,12 +98,7 @@ class Main(object):
             worker.start()
 
 	self.ventilator.start()
-        sleep(2)
 	self.result_manager.start()
-        sleep(1)
-
-
-
 
         self.result_manager.join()
         self.running = False
@@ -161,7 +109,7 @@ Converts a wikipedia XML dump file into sqlite databases to be used in WikipOff
 
 Options:
         -x, --xml       Input xml dump
-        -d, --db        Output database file (default : 'wiki.sqlite') 
+        -d, --db        Output database file (default : 'wiki.sqlite')
 /bin/bash: q : commande introuvable
         -t, --type      Wikimedia type (default: 'wikipedia')
 """)

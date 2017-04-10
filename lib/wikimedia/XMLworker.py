@@ -19,14 +19,14 @@ class XMLworker(object):
         self.xml_file = xml_file
         self.db_metadata = self._GetInfos()
         self.wikitype = self._GuessType()
-        self.zmq_channel = None
+        self.out_queue = None
         self.counter = 0
 
         if not os.path.isfile(self._languagedb):
             raise Exception(u'{0:s} doesn\'t exists. Please create it.'.format(self._languagedb))
 
     def GenerateMessage(self, title, body, msgtype):
-        self.zmq_channel.send_json({u'type': msgtype, u'title': title, u'body': body})
+        self.out_queue.put({u'type': msgtype, u'title': title, u'body': body})
 
     def GenerateRedirect(self, from_, to_):
         self.counter += 1
@@ -136,8 +136,8 @@ class XMLworker(object):
                             sys.stdout.flush()
                     element.clear()
 
-    def run(self, zmq_channel):
-        self.zmq_channel = zmq_channel
+    def run(self, out_queue):
+        self.out_queue = out_queue
         try:
             self._ProcessData()
             self.GenerateFinished(self.counter)
