@@ -27,7 +27,7 @@ class WikiDoStuff(object):
 
         self.extraction_status = Value('f', 0.0)
 
-        self.extraction_queue = Queue()
+        self.extraction_queue = Queue(maxsize=100000)
         self.writing_queue = Queue()
 
         nb_workers = cpu_count()
