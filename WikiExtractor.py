@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import sys
 #sys.path.append("./lib")
-sys.path.append("./lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
+sys.path.append(u'./lib/python{0:d}.{1:d}/site-packages/'.format(
+    sys.version_info.major, sys.version_info.minor))
 import base64
 import getopt
 from io import StringIO
@@ -16,14 +17,11 @@ from multiprocessing import Queue
 from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
-from lib.wikimedia import wikitools
 
 
 # TODO Use argparse instead
 
-class Main(object):
-
-    FINIESHED_MSG = u'finished'
+class WikiExtractor(object):
 
     def __init__(self, input_file, output_file):
 
@@ -36,11 +34,16 @@ class Main(object):
 
         nb_workers = cpu_count()
 
-	self.result_manager = Process(target=self.ResultManagerTask, args=(self.writing_queue, self.extraction_queue, nb_workers))
-	self.ventilator = Process(target=self.ExtractArticlesTask, args=(self.extraction_queue,))
+        self.result_manager = Process(
+            target=self.ResultManagerTask,
+            args=(self.writing_queue, self.extraction_queue, nb_workers))
+        self.ventilator = Process(target=self.ExtractArticlesTask, args=(self.extraction_queue,))
         self.worker_processes = []
-	for wrk_num in range(nb_workers):
-	    self.worker_processes.append(Process(target=self.WorkerTask, args=(wrk_num, self.extraction_queue, self.writing_queue)))
+        for _ in range(nb_workers):
+            self.worker_processes.append(
+                Process(
+                    target=self.WorkerTask,
+                    args=(self.extraction_queue, self.writing_queue)))
 
     def ExtractArticlesTask(self, out_queue):
         self.xml_extractor.run(out_queue)
@@ -50,7 +53,11 @@ class Main(object):
         counter = 0
         expected_nb_msg = -1
 
-        while(True):
+        while True:
+            if (counter%100) == 0:
+                msg_str = u'\rCompressing{0:s}\r'.format(u'.'*(counter/100))
+                sys.stdout.write(msg_str)
+                sys.stdout.flush()
             message_json = in_queue.get()
             title = message_json[u'title']
             body = message_json[u'body']
@@ -70,38 +77,35 @@ class Main(object):
         self.output.SetMetadata(self.xml_extractor.db_metadata)
         print(u'Building Indexes')
         self.output.Close()
-        for i in range(nb_workers):
+        for _ in range(nb_workers):
             ctrl_queue.put(u'finished')
         print(u'Result Manager has finished')
 
-    def WorkerTask(self, wrk_num, in_queue, out_queue):
+    def WorkerTask(self, in_queue, out_queue):
         while True:
             message_json = in_queue.get()
             if message_json == u'finished':
                 break
             if message_json[u'type'] == 2:
-                title, body = self.wikiconverter.Convert(
-                        message_json[u'title'], message_json[u'body'])
-                c = pylzma.compressfile(StringIO(body), dictionary=23)
-                result = c.read(5)
-                result+=struct.pack('<Q', len(body))
-                body = result+c.read()
+                _, body = self.wikiconverter.Convert(
+                    message_json[u'title'], message_json[u'body'])
+                compressed_article = pylzma.compressfile(StringIO(body), dictionary=23)
+                result = compressed_article.read(5)
+                result += struct.pack(u'<Q', len(body))
+                body = result + compressed_article.read()
                 message_json[u'type'] = 3
                 message_json[u'body'] = base64.b64encode(body)
 
             out_queue.put(message_json)
 
     def run(self):
-        self.running = True
-
-	for worker in self.worker_processes:
+        for worker in self.worker_processes:
             worker.start()
 
-	self.ventilator.start()
-	self.result_manager.start()
+        self.ventilator.start()
+        self.result_manager.start()
 
         self.result_manager.join()
-        self.running = False
 
 def show_usage():
     print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml
@@ -116,44 +120,41 @@ Options:
 
 
 def main():
-
-    script_name = os.path.basename(sys.argv[0])
-
     try:
-        long_opts = ['help', "db=", "xml=",'type=']
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hx:d:t:', long_opts)
+        long_opts = [u'help', u'db=', u'xml=', u'type=']
+        opts, _ = getopt.gnu_getopt(sys.argv[1:], 'hx:d:t:', long_opts)
     except getopt.GetoptError:
         show_usage()
         sys.exit(1)
 
-    output_file=""
+    output_file = None
 
     for opt, arg in opts:
-        if opt in ('-h', '--help'):
+        if opt in (u'-h', u'--help'):
             show_usage()
             sys.exit()
-        elif opt in ('-d', '--db'):
+        elif opt in (u'-d', u'--db'):
             output_file = arg
-        elif opt in ('-x','--xml'):
+        elif opt in (u'-x', u'--xml'):
             input_file = arg
 
-    if not 'input_file' in locals():
-        print("Please give me a wiki xml dump with -x or --xml")
+    if not u'input_file' in locals():
+        print(u'Please give me a wiki xml dump with -x or --xml')
         sys.exit()
 
-    if output_file is None or output_file=="":
-        print("I need a filename for the destination sqlite file")
+    if not output_file:
+        print(u'I need a filename for the destination sqlite file')
         sys.exit(1)
 
     if os.path.isfile(output_file):
-        print("%s already exists. Won't overwrite it."%output_file)
+        print(u'%s already exists. Won\'t overwrite it.'%output_file)
         sys.exit(1)
 
+    wikiextractor = WikiExtractor(input_file, output_file)
+    print(u'Converting xml dump {0:s} to database {1:s}. This may take eons...'.format(
+        input_file, output_file))
+    wikiextractor.run()
 
-    m = Main(input_file, output_file)
-    m.run()
-
-    print("Converting xml dump %s to database %s. This may take eons..."%(input_file,output_file))
 
 if __name__ == '__main__':
     main()

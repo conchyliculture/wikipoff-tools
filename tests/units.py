@@ -258,7 +258,7 @@ class TestXMLworker(unittest.TestCase):
             u'lang-code': u'fr',
             u'type': u'Wikipédia',
             u'dbname': u'frwiki'}
-        self.assertEqual(expected_infos, self.xmlw.infos)
+        self.assertEqual(expected_infos, self.xmlw.db_metadata)
 
     def test_wikitype(self):
         self.assertEqual(u'wikipedia', self.xmlw.wikitype)
