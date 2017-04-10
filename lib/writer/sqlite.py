@@ -92,11 +92,11 @@ class OutputSqlite(object):
         self.cursor.execute(u'INSERT OR REPLACE INTO metadata VALUES (\'source\', ?)', (stype,))
 
     def AddArticle(self, title, text):
+        self.articles_buffer.append((title, text))
         if len(self.articles_buffer) == self.max_inserts:
             self.cursor.executemany(
                 u'INSERT INTO articles VALUES (NULL, ?, ?)', self.articles_buffer)
             self.articles_buffer = []
-        self.articles_buffer.append((title, text))
 
     def _AllCommit(self):
         if len(self.articles_buffer) > 0:

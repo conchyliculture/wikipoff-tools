@@ -1,19 +1,15 @@
 #!/usr/bin/python
-import sys
-#sys.path.append("./lib")
-sys.path.append(u'./lib/python{0:d}.{1:d}/site-packages/'.format(
-    sys.version_info.major, sys.version_info.minor))
 import base64
 import getopt
-from io import StringIO
 import os.path
-import pylzma
-import struct
+import sys
+from time import sleep
 
 from multiprocessing import Process
 from multiprocessing import cpu_count
 from multiprocessing import Queue
 
+from lib.writer.compress import LzmaCompress
 from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
@@ -35,19 +31,24 @@ class WikiExtractor(object):
         nb_workers = cpu_count()
 
         self.result_manager = Process(
+            name='ResultsManager',
             target=self.ResultManagerTask,
             args=(self.writing_queue, self.extraction_queue, nb_workers))
-        self.ventilator = Process(target=self.ExtractArticlesTask, args=(self.extraction_queue,))
+        self.ventilator = Process(
+            name='ventilator',
+            target=self.ExtractArticlesTask, args=(self.extraction_queue,))
         self.worker_processes = []
-        for _ in range(nb_workers):
+        for i in range(nb_workers):
             self.worker_processes.append(
                 Process(
+                    name='Worker-%d'%i,
                     target=self.WorkerTask,
                     args=(self.extraction_queue, self.writing_queue)))
 
     def ExtractArticlesTask(self, out_queue):
         self.xml_extractor.run(out_queue)
         print("ExtractArticlesTask finished")
+        return
 
     def ResultManagerTask(self, in_queue, ctrl_queue, nb_workers):
         counter = 0
@@ -63,13 +64,14 @@ class WikiExtractor(object):
             body = message_json[u'body']
             if message_json[u'type'] == 1:
                 self.output.AddRedirect(title, body)
+                counter += 1
             elif message_json[u'type'] == 3:
                 self.output.AddArticle(title, base64.b64decode(body))
+                counter += 1
             elif message_json[u'type'] == 0:
                 expected_nb_msg = message_json[u'title']
             else:
                 raise Exception('wrong type : %d'%message_json[u'type'])
-            counter += 1
             if expected_nb_msg == counter:
                 break
 
@@ -80,6 +82,8 @@ class WikiExtractor(object):
         for _ in range(nb_workers):
             ctrl_queue.put(u'finished')
         print(u'Result Manager has finished')
+        sleep(1)
+        return
 
     def WorkerTask(self, in_queue, out_queue):
         while True:
@@ -89,14 +93,11 @@ class WikiExtractor(object):
             if message_json[u'type'] == 2:
                 _, body = self.wikiconverter.Convert(
                     message_json[u'title'], message_json[u'body'])
-                compressed_article = pylzma.compressfile(StringIO(body), dictionary=23)
-                result = compressed_article.read(5)
-                result += struct.pack(u'<Q', len(body))
-                body = result + compressed_article.read()
+                compressed_body = LzmaCompress(body)
                 message_json[u'type'] = 3
-                message_json[u'body'] = base64.b64encode(body)
-
+                message_json[u'body'] = base64.b64encode(compressed_body)
             out_queue.put(message_json)
+        return
 
     def run(self):
         for worker in self.worker_processes:
@@ -104,8 +105,8 @@ class WikiExtractor(object):
 
         self.ventilator.start()
         self.result_manager.start()
-
         self.result_manager.join()
+
 
 def show_usage():
     print("""Usage: python WikiExtractor.py  [options] -x wikipedia.xml

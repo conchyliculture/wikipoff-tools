@@ -1,22 +1,35 @@
 #!/usr/bin/python
-# coding: utf-8
+# encoding: utf-8
 
 from __future__ import unicode_literals
 
 import sys
 sys.path.append("..")
+sys.path.append(u'../lib/python{0:d}.{1:d}/site-packages/'.format(
+    sys.version_info.major, sys.version_info.minor))
+from binascii import unhexlify
 import codecs
 import locale
 import os.path
 import unittest
+from lib.writer.compress import LzmaCompress
 from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.converter import WikiConverter
 from lib.wikimedia.languages import wikifr
 from lib.wikimedia.XMLworker import XMLworker
 import lib.wikimedia.wikitools as wikitools
 
-
 locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
+
+
+class TestCompression(unittest.TestCase):
+
+    def test_lzma(self):
+        data = u'['+u'oléléolala'*12+u']'
+
+        compressed = LzmaCompress(data)
+        expected_compressed = unhexlify(u'5d000080009200000000000000002d9bc98c53caed25d8aa1da643a8fa430000')
+        self.assertEqual(expected_compressed, compressed)
 
 class TestSQLWriter(unittest.TestCase):
 
@@ -312,13 +325,12 @@ class TestConverter(unittest.TestCase):
         self.maxDiff = None
         c = WikiConverter(u'wikipedia', u'fr')
         a = self.GENERATED_STUFF[-1]
-        (title, body) = c.Convert(a[u'title'], a[u'body'])
+        (_, body) = c.Convert(a[u'title'], a[u'body'])
         with codecs.open(os.path.join(u'test_data', u'aude.html'), u'r', encoding=u'utf-8') as html:
             test_data = html.read()
-#            self.assertIsInstance(test_data, unicode)
-#            self.assertIsInstance(body, unicode)
             self.assertEqual(len(test_data), len(body))
             self.assertEqual(test_data, body)
+
 
 
 if __name__ == '__main__':

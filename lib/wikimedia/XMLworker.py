@@ -91,7 +91,7 @@ class XMLworker(object):
         contenttags = (u'text', u'title', u'id')
         wikiarticle = {}
         i = 0
-        eta_every = 100
+        eta_every = 300
         st = datetime.datetime.now()
 
         inputsize = os.path.getsize(self.xml_file)
@@ -127,12 +127,9 @@ class XMLworker(object):
                         self.GenerateArticle(title, body)
                         wikiarticle = {}
                         i += 1
-                        if i%eta_every == 0:
+                        if (i % eta_every) == 0:
                             percent = (100.0 * stream.tell()) / inputsize
-                            delta = ((100-percent)*(datetime.datetime.now()-st).total_seconds())/percent
-                            status_s = "%.02f%% ETA=%s\r"%(
-                                percent, str(datetime.timedelta(seconds=delta)))
-                            sys.stdout.write(status_s)
+                            sys.stdout.write(u'%.02f%%\r'%percent)
                             sys.stdout.flush()
                     element.clear()
 

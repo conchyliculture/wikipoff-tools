@@ -5,9 +5,11 @@ from __future__ import unicode_literals
 
 import os
 import sys
-sys.path.append("..")
-sys.path.append("../lib/python{0:d}.{1:d}/site-packages/".format(sys.version_info.major,  sys.version_info.minor))
+sys.path.append(u'..')
+sys.path.append(u'../lib/python{0:d}.{1:d}/site-packages/'.format(
+    sys.version_info.major, sys.version_info.minor))
 from lib.writer.sqlite import OutputSqlite
+import pylzma
 import sqlite3
 import subprocess
 from time import sleep
@@ -49,6 +51,7 @@ class ConvertWiki(unittest.TestCase):
         self.assertIsInstance(sql, OutputSqlite)
 
         conn = sqlite3.connect(self.sqlite_temp_path)
+        conn.text_factory = bytes
         cursor = conn.cursor()
 
         cursor.execute(u'SELECT count(*) from articles')
@@ -56,11 +59,18 @@ class ConvertWiki(unittest.TestCase):
 
         cursor.execute(u'SELECT count(*) from articles')
         articles_count = cursor.fetchone()
-        self.assertEqual(4420, articles_count[0])
+        self.assertEqual(4421, articles_count[0])
 
         cursor.execute(u'SELECT count(*) from redirects')
         redirects_count = cursor.fetchone()
         self.assertEqual(668, redirects_count[0])
+
+        search_title = u'Lenghe furlane'
+        cursor.execute(u'SELECT * from articles WHERE title = ? LIMIT 1', (search_title,))
+        _, article_title, article_body = cursor.fetchone()
+        self.assertEqual(search_title, article_title.decode(u'utf-8'))
+        self.assertEqual(5474, len(article_body))
+
 
 if __name__ == '__main__':
     unittest.main()
