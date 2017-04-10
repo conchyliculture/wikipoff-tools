@@ -36,9 +36,10 @@ I try to use all resources available to do the stuff.
 
 To get an overview, converting a small wikipedia (fur) with no fancy translation, I get the following:
 
-| Number of articles | Fancy conversions | i5-4210U @ 1.70GHz(4t) 8G RAM  | i7-47700U @ 3.40GHz(8t) 16G RAM |   |
-|--------------------|-------------------|--------------------------------|---------------------------------|---|
-| 5000~ (fur.wiki)   | No                | ~20s                           | ~8s                             |   |
+| Number of articles | Fancy conversions | i5-4210U @ 1.70GHz(4t) 8G RAM  | i7-47700U @ 3.40GHz(8t) 16G RAM |
+|--------------------|-------------------|--------------------------------|---------------------------------|
+| 5k~ (fur.wiki)     | No                | ~20s                           | ~8s                             |
+| 600k~ (eu.wiki)    | No                | ????                           | ~14min                          |
 
 ### Troubleshooting
 
