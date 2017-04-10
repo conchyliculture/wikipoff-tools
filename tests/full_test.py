@@ -17,7 +17,7 @@ import subprocess
 import unittest
 
 from lib.writer.sqlite import OutputSqlite
-from WikiExtractor import WikiExtractor
+from WikiConverter import WikiDoStuff
 
 
 class ConvertWiki(unittest.TestCase):
@@ -26,13 +26,16 @@ class ConvertWiki(unittest.TestCase):
     def setUpClass(cls):
         super(ConvertWiki, cls).setUpClass()
         cls.xml_filename = u'furwiki-latest-pages-articles.xml'
-        cls.xml_dump_path = os.path.join(u'test_data', cls.xml_filename)
-        cls.zipped_dump_path = os.path.join(u'test_data', cls.xml_filename+u'.gz')
+        cls.xml_dump_path = os.path.join(
+                os.path.dirname(__file__), u'test_data', cls.xml_filename)
+        cls.zipped_dump_path = os.path.join(
+                os.path.dirname(__file__), u'test_data', cls.xml_filename + u'.gz')
         if not os.path.exists(cls.xml_dump_path):
             print(u'Decompressing {0:s}'.format(cls.zipped_dump_path))
             subprocess.check_call([u'gzip', u'-d', cls.zipped_dump_path])
 
-        cls.sqlite_temp_path = os.path.join(u'test_data', u'test_sqlite')
+        cls.sqlite_temp_path = os.path.join(
+                os.path.dirname(__file__), u'test_data', u'test_sqlite')
         if os.path.exists(cls.sqlite_temp_path):
             os.remove(cls.sqlite_temp_path)
 
@@ -47,7 +50,7 @@ class ConvertWiki(unittest.TestCase):
             os.remove(cls.sqlite_temp_path)
 
     def test_SQLstuff(self):
-        main = WikiExtractor(self.xml_dump_path, self.sqlite_temp_path)
+        main = WikiDoStuff(self.xml_dump_path, self.sqlite_temp_path)
         print(u'Converting to DB... Please wait')
         main.run()
         sql = main.output

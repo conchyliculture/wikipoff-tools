@@ -1,35 +1,44 @@
 # WikipOff-tools
 
 ## About
+
 This set of tools are required to build [Wikimedia](https://www.wikimedia.org/) databases for use with [WikipOff](https://github.com/conchyliculture/wikipoff) Android App.
 
 ## Getting Started
 
 0. You need python-dev libs to compile pylzma
-1. `python convert.py` and follow instructions
-2. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/` or your other storage (see [Wikipoff README](https://github.com/conchyliculture/wikipoff/blob/master/README.md))
+1. Download a WikiMedia XML dump file (ie: [from wikipedia.com](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)). Decompress it if needed.
+2. `python WikiConverter.py dump.xml wiki.sqlite` and follow instructions
+3. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/` or your other Android storage (see [Wikipoff README](https://github.com/conchyliculture/wikipoff/blob/master/README.md))
 
-## Convert.py
 
-Use this script its purpose is to make you life easier:
-`python convert.py` and follow instructions
+## WikiConverter.py
 
-## WikiExtractor.py
+Takes a Wikimedia XML dump file and convert it to a sqlite database file.
 
-I've originally snatched this script from [Here](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor).
-It's been VERY HEAVILY refactored for my needs.
-Its purpose is to take a Wikimedia XML dump file and convert it to a sqlite database file.
 It will:
-* Loop over each article and redirect page
-* Convert the wikicode to HTML (with the help of lib/wiki<lang>.py files)
+* Parse the XML dump, to extract the wikicode
+* Convert the wikicode to HTML
 * Compress the text using LZMA
-* Store it in the database
+* Store it in the SQLite database
 
 It's been tested on French, Basque, Friulian, and English dumps.
 
 Example use:
 
-    python WikiExtractor.py -x enwiki-latest-pages-articles.xml -d en.wiki.sqlite
+    python WikiConverter.py enwiki-latest-pages-articles.xml en.wiki.sqlite
+
+This can take a few eons even on a buffed up system. It will also use all your CPUs, and RAM.
+
+### Performance
+
+I try to use all resources available to do the stuff.
+
+To get an overview, converting a small wikipedia (fur) with no fancy translation, I get the following:
+
+| Number of articles | Fancy conversions | i5-4210U @ 1.70GHz(4t) 8G RAM  | i7-47700U @ 3.40GHz(8t) 16G RAM |   |
+|--------------------|-------------------|--------------------------------|---------------------------------|---|
+| 5000~ (fur.wiki)   | No                | ~20s                           | ~8s                             |   |
 
 ### Troubleshooting
 
@@ -41,20 +50,6 @@ If your /tmp is lacking some space, you can do:
     sqlite> PRAGMA temp_store =1;
     sqlite> vacuum;
 
-## WikiConvert.py
-
-This scripts helps tracking converting issues. It's able to parse the raw xml file and, with the use of a helper database (which contains locations of articles in the XML file), displays outputs of the wikicode to HTML conversion.
-
-Examples:
-Show the HTML conversion output of an article with title `Algorithme` :
-
-    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml  -t Algorithme
-
-Show the raw wikicode article with title `Algorithme` :
-
-    python ConvertArticle.py  -d helper.sqlite -f /raid/incoming/tests_wiki/frwiki-latest-pages-articles.xml r -t Algorithme -r
-
-The file `helper.sqlite` is required, and will be built if needed.
 
 ## split_db.py
 
@@ -65,6 +60,7 @@ Example:
     python split_db.py -l en -d en.wiki.sqlite
 
 ## License
+
 GPLv3. Get it, hack it, compile it, share it.
 
 ## Donate

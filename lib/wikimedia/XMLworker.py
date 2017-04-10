@@ -5,7 +5,6 @@ import getpass
 import os
 import re
 import sqlite3
-import sys
 import lib.wikimedia.wikitools as wikitools
 from lxml import etree
 
@@ -19,6 +18,8 @@ class XMLworker(object):
         self.wikitype = self._GuessType()
         self.out_queue = None
         self.counter = 0
+
+        self.percent = None
 
         if not os.path.isfile(self._languagedb):
             raise Exception(u'{0:s} doesn\'t exists. Please create it.'.format(self._languagedb))
@@ -125,13 +126,12 @@ class XMLworker(object):
                         wikiarticle = {}
                         i += 1
                         if (i % eta_every) == 0:
-                            percent = (100.0 * stream.tell()) / inputsize
-                            sys.stdout.write(u'%.02f%%\r'%percent)
-                            sys.stdout.flush()
+                            self.percent.value = (100.0 * stream.tell()) / inputsize
                     element.clear()
 
-    def run(self, out_queue):
+    def run(self, out_queue, status):
         self.out_queue = out_queue
+        self.percent = status
         try:
             self._ProcessData()
             self.GenerateFinished(self.counter)

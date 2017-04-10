@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import argparse
 import base64
+import itertools
 import os.path
 import sys
 from time import sleep
@@ -8,6 +9,7 @@ from time import sleep
 from multiprocessing import Process
 from multiprocessing import cpu_count
 from multiprocessing import Queue
+from multiprocessing import Value
 
 from lib.writer.compress import LzmaCompress
 from lib.writer.sqlite import OutputSqlite
@@ -15,13 +17,15 @@ from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
 
 
-class WikiExtractor(object):
+class WikiDoStuff(object):
 
     def __init__(self, input_file, output_file):
 
         self.output = OutputSqlite(output_file)
         self.xml_extractor = XMLworker(input_file)
         self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr')
+
+        self.extraction_status = Value('f', 0.0)
 
         self.extraction_queue = Queue()
         self.writing_queue = Queue()
@@ -31,10 +35,10 @@ class WikiExtractor(object):
         self.result_manager = Process(
             name='ResultsManager',
             target=self.ResultManagerTask,
-            args=(self.writing_queue, self.extraction_queue, nb_workers))
+            args=(self.writing_queue, self.extraction_queue, nb_workers, self.extraction_status))
         self.ventilator = Process(
             name='ventilator',
-            target=self.ExtractArticlesTask, args=(self.extraction_queue,))
+            target=self.ExtractArticlesTask, args=(self.extraction_queue, self.extraction_status))
         self.worker_processes = []
         for i in range(nb_workers):
             self.worker_processes.append(
@@ -43,18 +47,21 @@ class WikiExtractor(object):
                     target=self.WorkerTask,
                     args=(self.extraction_queue, self.writing_queue)))
 
-    def ExtractArticlesTask(self, out_queue):
-        self.xml_extractor.run(out_queue)
-        print("ExtractArticlesTask finished")
+    def ExtractArticlesTask(self, out_queue, status):
+        self.xml_extractor.run(out_queue, status)
         return
 
-    def ResultManagerTask(self, in_queue, ctrl_queue, nb_workers):
+    def ResultManagerTask(self, in_queue, ctrl_queue, nb_workers, status):
         counter = 0
         expected_nb_msg = -1
 
+        spinner_chars = itertools.cycle("\|/-")
         while True:
-            if (counter%100) == 0:
-                msg_str = u'\rCompressing{0:s}\r'.format(u'.'*(counter/100))
+            if (counter%50) == 0:
+                extraction_status = u'%.02f%%'%status.value
+                if status.value > 99.89:
+                    extraction_status = u'Complete'
+                msg_str = u'\rExtraction: {0:s} | Compressing {1:s}\r'.format(extraction_status, next(spinner_chars))
                 sys.stdout.write(msg_str)
                 sys.stdout.flush()
             message_json = in_queue.get()
@@ -121,7 +128,7 @@ def main():
         print(u'{0:s} already exists. Won\'t overwrite it.'.format(args.output_file))
         sys.exit(1)
 
-    wikiextractor = WikiExtractor(args.xml_file, args.output_file)
+    wikiextractor = WikiDoStuff(args.xml_file, args.output_file)
     print(u'Converting xml dump {0:s} to database {1:s}. This may take eons...'.format(
         args.xml_file, args.output_file))
     wikiextractor.run()
