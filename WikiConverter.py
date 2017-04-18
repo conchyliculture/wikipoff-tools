@@ -105,13 +105,25 @@ class WikiDoStuff(object):
             out_queue.put(message_json)
         return
 
-    def run(self):
+    def _AbortAbort(self):
         for worker in self.worker_processes:
-            worker.start()
+            worker.terminate()
 
-        self.ventilator.start()
-        self.result_manager.start()
-        self.result_manager.join()
+        self.ventilator.terminate()
+        self.result_manager.terminate()
+        print("Termination complete")
+
+    def run(self):
+        try:
+            for worker in self.worker_processes:
+                worker.start()
+
+            self.ventilator.start()
+            self.result_manager.start()
+            self.result_manager.join()
+        except KeyboardInterrupt as e:
+            self._AbortAbort()
+            raise e
 
 
 def main():
