@@ -51,6 +51,13 @@ class TestSQLWriter(unittest.TestCase):
             u'author': u'lolll'
         }
         o.SetMetadata(good_tags)
+        res = o.GetMetadata()
+        date = res.pop(u'date')
+        self.assertIsNotNone(date, None)
+        version = res.pop(u'version')
+        self.assertIsNotNone(version, None)
+
+        self.assertEqual(good_tags, res)
 
 
     def test_AddRedirect(self):

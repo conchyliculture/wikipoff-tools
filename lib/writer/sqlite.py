@@ -11,10 +11,25 @@ class OutputSqlite(object):
         u'type', u'source', u'author'
     ]
 
-    def __init__(self, sqlite_file, max_page_count=None):
-        if sqlite_file:
-            self.sqlite_file = sqlite_file
-            self.conn = sqlite3.connect(sqlite_file)
+
+    def __init__(self, sqlite_file, max_file_size=None):
+        self.sqlite_file = sqlite_file
+        self.sqlite_file_tab = sqlite_file.split(u'.')
+        self.max_file_size = max_file_size
+
+        self.nb_inserted_articles = 0
+        self.file_num = 0
+
+        self.articles_buffer = []
+        self.redirects_buffer = []
+        self.max_inserts = 1000
+        self.max_articles_per_db = None
+        self._Open()
+
+    def _Open(self):
+        if self.sqlite_file:
+            self.sqlite_file = self.sqlite_file
+            self.conn = sqlite3.connect(self.sqlite_file)
         else:
             self.conn = sqlite3.connect(u':memory:')
 
@@ -22,8 +37,7 @@ class OutputSqlite(object):
         self.cursor = self.conn.cursor()
         self.cursor.execute(u'PRAGMA synchronous=NORMAL')
         self.cursor.execute(u'PRAGMA journal_mode=MEMORY')
-        if max_page_count:
-            self.SetMaxPageCount(max_page_count)
+        self.SetMaxFileSize()
 
         self.cursor.execute(
             '''CREATE TABLE IF NOT EXISTS articles (_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,10 +49,16 @@ class OutputSqlite(object):
                                                     title_to VARCHAR(255))''')
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS metadata (key TEXT, value TEXT);''')
         self.conn.commit()
-        self.articles_buffer = []
-        self.redirects_buffer = []
-        self.max_inserts = 1000
 
+    def _GetMetadataValue(self, key):
+        val = self.cursor.execute(u'SELECT \'%s\' FROM metadata'% key).fetchone()[0]
+        return val
+
+    def GetMetadata(self):
+        res = {}
+        for k, v in self.cursor.execute(u'SELECT * from metadata'):
+            res[k] = v
+        return res
 
     def SetMetadata(self, infos):
         self._CheckRequiredInfos(infos)
@@ -56,14 +76,10 @@ class OutputSqlite(object):
             if not res:
                 raise Exception(u'We lack required infos : {0:s}'.format(key))
 
-    def SetMaxPageCount(self, max_page_count):
-        self.cursor.execute(u'PRAGMA max_page_count=%d'%max_page_count)
-
-    def AddRedirect(self, source, dest):
-        if len(self.redirects_buffer) == self.max_inserts:
-            self.cursor.executemany(u'INSERT INTO redirects VALUES (?, ?)', self.redirects_buffer)
-            self.redirects_buffer = []
-        self.redirects_buffer.append((source, dest))
+    def SetMaxFileSize(self):
+        # Rough estimation is ~2k of final DB size per article
+        if self.max_file_size:
+            self.max_articles_per_db = (self.max_file_size*1024)/2
 
     def _SetLang(self, lang_code, lang_local, lang_english):
         self.cursor.execute(
@@ -90,12 +106,27 @@ class OutputSqlite(object):
     def _SetSource(self, stype):
         self.cursor.execute(u'INSERT OR REPLACE INTO metadata VALUES (\'source\', ?)', (stype,))
 
+    def AddRedirect(self, source, dest):
+        self.redirects_buffer.append((source, dest))
+        if len(self.redirects_buffer) == self.max_inserts:
+            self.cursor.executemany(u'INSERT INTO redirects VALUES (?, ?)', self.redirects_buffer)
+            self.redirects_buffer = []
+
     def AddArticle(self, title, text):
         self.articles_buffer.append((title, text))
+        self.nb_inserted_articles += 1
         if len(self.articles_buffer) == self.max_inserts:
             self.cursor.executemany(
                 u'INSERT INTO articles VALUES (NULL, ?, ?)', self.articles_buffer)
             self.articles_buffer = []
+        if self.max_articles_per_db:
+            if self.nb_inserted_articles >= self.max_articles_per_db:
+                self.file_num +=1
+                self.Close()
+                self.sqlite_file = u'.'.join(self.sqlite_file_tab[:-1]) + u'-{0:d}'.format(self.file_num)+ u'.sqlite'
+                print(u'DB full, making a new one: %s'%self.sqlite_file)
+                self._Open()
+                self.nb_inserted_articles = 0
 
     def _AllCommit(self):
         if len(self.articles_buffer) > 0:
@@ -104,6 +135,8 @@ class OutputSqlite(object):
         if len(self.redirects_buffer) > 0:
             self.cursor.executemany(
                 u'INSERT INTO redirects VALUES (?, ?)', self.redirects_buffer)
+        self.articles_buffer = []
+        self.redirects_buffer = []
         self.conn.commit()
 
     def Close(self):

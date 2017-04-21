@@ -17,11 +17,13 @@ from lib.wikimedia.XMLworker import XMLworker
 from lib.wikimedia.converter import WikiConverter
 
 
+MAX_FILE_SIZE = float(2**32 -1)
+
 class WikiDoStuff(object):
 
-    def __init__(self, input_file, output_file):
+    def __init__(self, input_file, output_file, max_file_size=MAX_FILE_SIZE):
 
-        self.output = OutputSqlite(output_file)
+        self.output = OutputSqlite(output_file, max_file_size=max_file_size)
         self.xml_extractor = XMLworker(input_file)
         self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr')
 
