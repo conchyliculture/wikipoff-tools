@@ -97,7 +97,10 @@ class XMLworker(object):
         inputsize = os.path.getsize(self.xml_file)
 
         with open(self.xml_file, 'rb') as stream:
-            for _, element in etree.iterparse(stream, encoding=u'utf-8'):
+            context = etree.iterparse(stream, events=(u'start', u'end'), encoding=u'utf-8')
+            context = iter(context)
+            _, root = context.next()
+            for event, element in context:
                 tag = element.tag
                 index = tag.find(u'}')
                 if index > -1:
@@ -128,6 +131,8 @@ class XMLworker(object):
                         if (i % eta_every) == 0:
                             self.percent.value = (100.0 * stream.tell()) / inputsize
                     element.clear()
+                if event == u'end':
+                    root.clear()
 
     def run(self, out_queue, status):
         self.out_queue = out_queue
