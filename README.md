@@ -4,12 +4,13 @@
 
 This set of tools are required to build [Wikimedia](https://www.wikimedia.org/) databases for use with [WikipOff](https://github.com/conchyliculture/wikipoff) Android App.
 
-## Getting Started
+## Getting Started
 
 0. You need python-dev libs to compile pylzma
-1. Download a WikiMedia XML dump file (ie: [from wikipedia.com](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)). Decompress it if needed.
-2. `python WikiConverter.py dump.xml wiki.sqlite` and follow instructions
-3. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/` or your other Android storage (see [Wikipoff README](https://github.com/conchyliculture/wikipoff/blob/master/README.md))
+  0. `apt-get install python-dev` 
+0. Download a WikiMedia XML dump file (ie: [from Wikipedia](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)).
+0. `python WikiConverter.py dump.xml wiki.sqlite` and wait
+0. `adb push wiki.sqlite /mnt/sdcard/fr.renzo.wikipoff/databases/` or your other Android storage (see [Wikipoff README](https://github.com/conchyliculture/wikipoff/blob/master/README.md))
 
 
 ## WikiConverter.py
@@ -28,13 +29,11 @@ Example use:
 
     python WikiConverter.py enwiki-latest-pages-articles.xml en.wiki.sqlite
 
-This can take a few eons even on a buffed up system. It will also use all your CPUs, and RAM.
+This can take a few eons even on a buffed up system. It will also use all your CPUs, and large amount of disk.
 
-### Performance
+### Performance
 
-I try to use all resources available to do the stuff.
-
-To get an overview, converting a small wikipedia (fur) with no fancy translation, I get the following:
+Here is a small overview, converting dumps of various sizes from wikipedia:
 
 | Number of articles | Fancy conversions | i5-4210U @ 1.70GHz(4t) 8G RAM  | i7-47700U @ 3.40GHz(8t) 16G RAM |
 |--------------------|-------------------|--------------------------------|---------------------------------|
@@ -44,9 +43,9 @@ To get an overview, converting a small wikipedia (fur) with no fancy translation
 
 ### Troubleshooting
 
-How to fix: `Error: database or disk is full (for example after the VACUUM command)`
-SQlite will use PRAGMA temp_store_directory; for its temporary work. It defaults to /tmp.
-If your /tmp is lacking some space, you can do:
+`Error: database or disk is full (for example after the VACUUM command)`
+
+SQlite uses `temp_store_directory` for its temporary work. It defaults to `/tmp`. For the `VACUUM` operation, your `/tmp` needs to be at least as large as the generated sqlite file. You can change the `temp_store_directory` and then VACUUM this way :
 
     sqlite> PRAGMA temp_store_directory = '<some place with disk space>';
     sqlite> PRAGMA temp_store =1;
@@ -64,6 +63,7 @@ Example:
 ## License
 
 GPLv3. Get it, hack it, compile it, share it.
+If you make money out of it I'll be sad. 
 
 ## Donate
 I accept donations in beer, various cryptcoins, angry and happy emails.
