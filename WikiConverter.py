@@ -28,7 +28,7 @@ class WikiDoStuff(object):
         self.extraction_status = Value('f', 0.0)
 
         self.extraction_queue = Queue(maxsize=1000)
-        self.writing_queue = Queue()
+        self.writing_queue = Queue(maxsize=1000)
 
         nb_workers = cpu_count()
 
@@ -61,7 +61,7 @@ class WikiDoStuff(object):
                 extraction_status = u'%.02f%%'%status.value
                 if status.value > 99.89:
                     extraction_status = u'Complete'
-                msg_str = u'\rExtraction: {0:s} | Compressing {1:s} | Results Queue Size: {2:d}\r'.format(
+                msg_str = u'\rExtraction: {0:s} | Compressing {1:s} | Results Queue Size: {2:6d}\r'.format(
                         extraction_status, next(spinner_chars), ctrl_queue.qsize())
                 sys.stdout.write(msg_str)
                 sys.stdout.flush()

@@ -75,7 +75,7 @@ class ConvertWiki(unittest.TestCase):
         cursor.execute(u'SELECT * from articles WHERE title = ? LIMIT 1', (search_title,))
         _, article_title, article_body = cursor.fetchone()
         self.assertEqual(search_title, article_title.decode(u'utf-8'))
-        self.assertEqual(5474, len(article_body))
+        self.assertEqual(5519, len(article_body))
 
 
 if __name__ == '__main__':

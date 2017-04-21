@@ -11,4 +11,3 @@ srsly_google
 managedb.py
 *.rb
 *.bz2
-*.gz
