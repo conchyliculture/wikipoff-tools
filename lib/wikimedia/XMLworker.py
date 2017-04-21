@@ -115,16 +115,18 @@ class XMLworker(object):
                         self.GenerateRedirect(wikiarticle[u'title'], redir)
                         wikiarticle = {}
                     else:
-                        if wikiarticle[u'text'] is None:
+                        body = wikiarticle.get(u'text', None)
+                        if not body:
+                            element.clear()
                             continue
                         title = wikiarticle[u'title']
                         colon = title.find(u':')
                         if colon > 0:
                             header_title = title[0:colon]
                             if not self.language_helper.IsAllowedTitle(header_title):
+                                element.clear()
                                 continue
 
-                        body = wikiarticle[u'text']
                         self.GenerateArticle(title, body)
                         wikiarticle = {}
                         i += 1
