@@ -39,7 +39,8 @@ To get an overview, converting a small wikipedia (fur) with no fancy translation
 | Number of articles | Fancy conversions | i5-4210U @ 1.70GHz(4t) 8G RAM  | i7-47700U @ 3.40GHz(8t) 16G RAM |
 |--------------------|-------------------|--------------------------------|---------------------------------|
 | 5k~ (fur.wiki)     | No                | ~20s                           | ~8s                             |
-| 600k~ (eu.wiki)    | No                | ????                           | ~14min                          |
+| 600k~ (eu.wiki)    | No                | ~35min                         | ~14min                          |
+| 1.9M~ (fr.wiki)    | Yes               | ????                           | ~67min                          |
 
 ### Troubleshooting
 
