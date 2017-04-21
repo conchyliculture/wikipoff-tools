@@ -40,12 +40,15 @@ Here is a small overview, converting dumps of various sizes from wikipedia:
 | 5k~ (fur.wiki)     | No                | ~20s                           | ~8s                             |
 | 600k~ (eu.wiki)    | No                | ~35min                         | ~14min                          |
 | 1.9M~ (fr.wiki)    | Yes               | ????                           | ~67min                          |
+| 6.5M~ (eu.wiki)    | No                | ????                           | ~4h30min                        |
 
 ### Troubleshooting
 
 `Error: database or disk is full (for example after the VACUUM command)`
 
 SQlite uses `temp_store_directory` for its temporary work. It defaults to `/tmp`. For the `VACUUM` operation, your `/tmp` needs to be at least as large as the generated sqlite file. You can change the `temp_store_directory` and then VACUUM this way :
+
+    $ sqlite3 enwiki.sqlite
 
     sqlite> PRAGMA temp_store_directory = '<some place with disk space>';
     sqlite> PRAGMA temp_store =1;
