@@ -14,7 +14,8 @@ class OutputSqlite(object):
 
     def __init__(self, sqlite_file, max_file_size=None):
         self.sqlite_file = sqlite_file
-        self.sqlite_file_tab = sqlite_file.split(u'.')
+        if sqlite_file:
+            self.sqlite_file_tab = sqlite_file.split(u'.')
         self.max_file_size = max_file_size
 
         self.nb_inserted_articles = 0
