@@ -19,10 +19,7 @@ import unittest
 from lib.writer.compress import LzmaCompress
 from lib.writer.sqlite import OutputSqlite
 from lib.wikimedia.converter import WikiConverter
-from lib.wikimedia.languages import wikifr
 from lib.wikimedia.XMLworker import XMLworker
-
-locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
 
 
 class TestCompression(unittest.TestCase):
@@ -94,8 +91,15 @@ class TestSQLWriter(unittest.TestCase):
         o._AllCommit()
         o.Close()
 
-class TestWIkiFr(unittest.TestCase):
-    sfrt = wikifr.WikiFRTranslator()
+class TestWikiFr(unittest.TestCase):
+
+    def setUp(self):
+        try:
+            locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
+            from lib.wikimedia.languages import wikifr
+            self.sfrt = wikifr.WikiFRTranslator()
+        except locale.Error as e:
+            self.skipTest(u'Skipping WikiFr tests due to locale not being installed')
 
     def testLang(self):
         tests = [
@@ -280,6 +284,10 @@ class TestXMLworkerClass(XMLworker):
 class TestXMLworker(unittest.TestCase):
 
     def setUp(self):
+        try:
+            locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
+        except locale.Error as e:
+            self.skipTest(u'Skipping TestXMLworker tests due to locale not being installed')
         self.GENERATED_STUFF = []
         self.xmlw = TestXMLworkerClass(
             os.path.join(
@@ -352,6 +360,14 @@ class TestConverterNoLang(unittest.TestCase):
 class TestConverterFR(unittest.TestCase):
 
     def setUp(self):
+        try:
+            locale.setlocale(locale.LC_ALL, u'fr_FR.utf-8')
+            from lib.wikimedia.languages import wikifr
+            self.sfrt = wikifr.WikiFRTranslator()
+        except locale.Error as e:
+            self.skipTest(u'Skipping WikiFr tests due to locale not being installed')
+
+
         self.GENERATED_STUFF = []
         self.xmlw = TestXMLworkerClass(
             os.path.join(
