@@ -25,7 +25,7 @@ class WikiDoStuff(object):
 
         self.output = OutputSqlite(output_file, max_file_size=max_file_size)
         self.xml_extractor = XMLworker(input_file)
-        self.wikiconverter = WikiConverter(wikitype=u'wikipedia', wikilang=u'fr')
+        self.wikiconverter = WikiConverter()
 
         self.extraction_status = Value('f', 0.0)
 
