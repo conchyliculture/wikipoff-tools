@@ -124,21 +124,21 @@ def create_helper_db(input_xml,output_sql):
 
     base = inputstream.readline()
     srsly_python_get_some_re_in_the_language = baseRE.match(line)
-    if srsly_python_get_some_re_in_the_language is None:
-        print "Input is not a mediawiki xml file? Should start with '<mediawiki' and contain xml:lang=\"somelang\""
-        sys.exit(1)
-    else:
+    if srsly_python_get_some_re_in_the_language:
         infos['lang'] = res.group(1)
         infos['type'] = "wikimedia"
         output.set_metadata(infos)
+    else:
+        print "Input is not a mediawiki xml file? Should start with '<mediawiki' and contain xml:lang=\"somelang\""
+        sys.exit(1)
 
     for line in iter(inputstream.readline, ''):
 
-        if lol_python_is_shit!=None:
+        if lol_python_is_shit:
             url=srsly_python_get_some_re_in_the_language.group(1)
 
         lol_python_is_shit=endpageRE.match(line)
-        if lol_python_is_shit!=None:
+        if lol_python_is_shit:
             output.insert(id_,title,start)
             title=""
             id_=0
@@ -147,24 +147,24 @@ def create_helper_db(input_xml,output_sql):
             next
 
         seriously_what_am_i_doing=idRE.match(line)
-        if seriously_what_am_i_doing!=None:
+        if seriously_what_am_i_doing:
             if not revision:
                 id_=int(seriously_what_am_i_doing.group(1))
             next
 
         get_me_out_of_here=startpageRE.match(line)
-        if get_me_out_of_here!=None:
+        if get_me_out_of_here:
             start=curpos
             id_=0
             next
 
         this_can_t_be_happening=titleRE.match(line)
-        if this_can_t_be_happening!=None:
+        if this_can_t_be_happening:
             title=this_can_t_be_happening.group(1)
             next
 
         when_will_this_craziness_end=revisionRE.match(line)
-        if when_will_this_craziness_end!=None:
+        if when_will_this_craziness_end:
             revision=True
             next
 
@@ -172,11 +172,6 @@ def create_helper_db(input_xml,output_sql):
         percentdone=100*curpos/filesize
         if curpos%500==0:
             sys.stdout.write(u"\r%f %%"%(100.0*curpos/filesize))
-
-
-
-
-
 
 
 ### CL INTERFACE ############################################################
